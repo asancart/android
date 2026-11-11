@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Asancart Android Wireframe</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lalezar&family=Vazirmatn:wght@400;500;700;900&display=swap">
+<link rel="stylesheet" href="prototype/theme.css">
+<link rel="stylesheet" href="prototype/app.css">
+<link rel="stylesheet" href="prototype/page.css">
+</head>
+<body>
+<script>document.documentElement.setAttribute('data-brand', 'wireframe');</script>
+<div class="pg">
+  <header class="pg-head">
+    <div>
+      <p class="eyebrow">Asancart · Android SMS app</p>
+      <h1>Wireframe: how it works</h1>
+      <p class="lede">Grayscale, clickable. Same screens and layout as the full design. Tap through the phone, or jump to any screen from the map. Notes beside the phone explain each screen and link the spec.</p>
+    </div>
+    <div class="ctrls">
+      <div class="ctl" role="group" aria-label="Phone theme">
+        <button data-theme-btn="light" aria-pressed="true">Light</button><button data-theme-btn="dark" aria-pressed="false">Dark</button>
+      </div>
+      <label class="chk-l"><input type="checkbox" id="offline"> Simulate no connection</label>
+      <button class="pbtn" id="restart">Restart from first run</button>
+      <a class="pbtn" data-xlink="mockups" href="mockups.html">Full design →</a>
+    </div>
+  </header>
+
+  <section class="flow" id="flow" aria-label="Screen map"></section>
+
+  <main class="stage">
+    <div class="phone-slot"><div id="phone"></div></div>
+    <article class="notes" id="notes" aria-live="polite"></article>
+  </main>
+</div>
+
+<script src="prototype/app.js"></script>
+<script src="prototype/notes.js"></script>
+<script>
+(function () {
+  const P = window.ACProto;
+  const N = window.ACNotes;
+  const STAGES = ['First run', 'Setup', 'Daily use'];
+  const flowEl = document.getElementById('flow');
+  const notesEl = document.getElementById('notes');
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+  flowEl.innerHTML = STAGES.map((st, i) => {
+    const ids = P.ORDER.filter((id) => P.SCREENS[id].stage === st);
+    return `<div class="st"><h3><span>${i + 1}. ${st}</span><span>${ids.length} screens</span></h3><div class="chips">${
+      ids.map((id, j) => `${j && st !== 'Daily use' ? '<span class="arr">→</span>' : ''}<button class="sc" data-jump="${id}">${esc(P.SCREENS[id].name)}</button>`).join('')
+    }</div></div>`;
+  }).join('');
+
+  function showNotes(id) {
+    const sc = P.SCREENS[id];
+    const n = N[id] || {};
+    const i = P.ORDER.indexOf(id);
+    notesEl.innerHTML = `
+      <div><p class="eyebrow">${esc(sc.stage)} · screen ${i + 1} of ${P.ORDER.length}</p>
+      <h2>${esc(sc.name)}<span class="fa" lang="fa" dir="rtl">${esc(sc.fa)}</span></h2></div>
+      <p class="job">${esc(n.job || '')}</p>
+      <div><h4>What happens</h4><ul>${(n.does || []).map((x) => `<li>${esc(x)}</li>`).join('')}</ul></div>
+      ${n.reqs ? `<div><h4>Spec</h4><div class="reqs">${n.reqs.map((x) => `<span>${esc(x)}</span>`).join('')}</div></div>` : ''}
+      ${n.open ? `<div class="open"><h4>Open point</h4><ul>${n.open.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></div>` : ''}
+      <div class="navrow">
+        ${i > 0 ? `<button class="pbtn" data-jump="${P.ORDER[i - 1]}">← ${esc(P.SCREENS[P.ORDER[i - 1]].name)}</button>` : ''}
+        ${i < P.ORDER.length - 1 ? `<button class="pbtn" data-jump="${P.ORDER[i + 1]}">${esc(P.SCREENS[P.ORDER[i + 1]].name)} →</button>` : ''}
+      </div>`;
+    document.querySelectorAll('[data-jump].sc').forEach((b) => b.setAttribute('aria-current', String(b.dataset.jump === id)));
+    try { if (location.hash.slice(1) !== id) history.replaceState(null, '', '#' + id); } catch (e) { /* ignore */ }
+  }
+
+  const proto = P.create({ skin: 'wireframe', theme: 'light', onChange: showNotes, onTheme: setTheme });
+  proto.mount(document.getElementById('phone'));
+
+  function setTheme(t) {
+    const v = t === 'system' ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : t;
+    document.querySelectorAll('[data-theme-btn]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.themeBtn === v)));
+  }
+  document.querySelectorAll('[data-theme-btn]').forEach((b) => b.addEventListener('click', () => { proto.setTheme(b.dataset.themeBtn); setTheme(b.dataset.themeBtn); }));
+  document.getElementById('offline').addEventListener('change', (e) => proto.setFlag('offline', e.target.checked));
+  document.getElementById('restart').addEventListener('click', () => proto.reset());
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-jump]');
+    if (b) proto.jump(b.dataset.jump);
+  });
+  const fromHash = () => { const h = location.hash.slice(1); if (P.SCREENS[h] && h !== proto.cur) proto.jump(h); };
+  window.addEventListener('hashchange', fromHash);
+  fromHash();
+})();
+</script>
+</body>
+</html>

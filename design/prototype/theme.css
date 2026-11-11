@@ -1,0 +1,245 @@
+/*
+  Asancart colour tokens for the design prototypes.
+  Values are copied from asancart/frontend packages/tokens/tokens.json (C1 "Saffron & Plum")
+  and its grayscale wireframe override. That file is the source of truth; update both together.
+
+  Page chrome: :root, following the viewer theme (light, dark, or system).
+  Phone screens: .ac-phone[data-t="light|dark"], set per phone so light and dark can sit side by side.
+  Wireframe skin: data-brand="wireframe" on <html> for the page, .wf on a phone.
+*/
+
+:root {
+  --ac-bg: #faf7f5;
+  --ac-surface: #ffffff;
+  --ac-surface-2: #f4ebe5;
+  --ac-ink: #2a1a12;
+  --ac-muted: #715d54;
+  --ac-line: #ecdfd7;
+  --ac-primary: #c84c0a;
+  --ac-primary-hover: #a63e07;
+  --ac-on-primary: #ffffff;
+  --ac-accent: #6b2d84;
+  --ac-on-accent: #faf7f5;
+  --ac-ok: #167246;
+  --ac-warn: #94590a;
+  --ac-bad: #c0392b;
+  --ac-info: #2b6cb0;
+  --ac-focus: #6b2d84;
+  --ac-overlay: rgba(42, 26, 18, 0.45);
+  --ac-primary-text: #b04208;
+
+  --ac-font-display: "Lalezar", "Vazirmatn", Tahoma, sans-serif;
+  --ac-font-body: "Vazirmatn", Tahoma, "Segoe UI", sans-serif;
+  --ac-font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --ac-radius-sm: 7px;
+  --ac-radius-md: 14px;
+  --ac-radius-lg: 18px;
+  --ac-radius-pill: 999px;
+  --ac-motion-fast: 120ms;
+  --ac-motion-base: 180ms;
+  --ac-motion-slow: 280ms;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ac-bg: #170f0b;
+    --ac-surface: #22160f;
+    --ac-surface-2: #2c1d14;
+    --ac-ink: #f7ebe3;
+    --ac-muted: #b39a8d;
+    --ac-line: #3e2b21;
+    --ac-primary: #ff8a3d;
+    --ac-primary-hover: #ff9d5c;
+    --ac-on-primary: #2a1103;
+    --ac-accent: #c79bdd;
+    --ac-on-accent: #170f0b;
+    --ac-ok: #4cc38a;
+    --ac-warn: #e0a84a;
+    --ac-bad: #f07167;
+    --ac-info: #6aa8f0;
+    --ac-focus: #c79bdd;
+    --ac-overlay: rgba(0, 0, 0, 0.6);
+    --ac-primary-text: #ff8a3d;
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --ac-bg: #170f0b;
+  --ac-surface: #22160f;
+  --ac-surface-2: #2c1d14;
+  --ac-ink: #f7ebe3;
+  --ac-muted: #b39a8d;
+  --ac-line: #3e2b21;
+  --ac-primary: #ff8a3d;
+  --ac-primary-hover: #ff9d5c;
+  --ac-on-primary: #2a1103;
+  --ac-accent: #c79bdd;
+  --ac-on-accent: #170f0b;
+  --ac-ok: #4cc38a;
+  --ac-warn: #e0a84a;
+  --ac-bad: #f07167;
+  --ac-info: #6aa8f0;
+  --ac-focus: #c79bdd;
+  --ac-overlay: rgba(0, 0, 0, 0.6);
+  --ac-primary-text: #ff8a3d;
+  color-scheme: dark;
+}
+
+/* Wireframe page chrome */
+:root[data-brand="wireframe"] {
+  --ac-bg: #f5f5f5;
+  --ac-surface: #ffffff;
+  --ac-surface-2: #ebebeb;
+  --ac-ink: #1f1f1f;
+  --ac-muted: #6b6b6b;
+  --ac-line: #d4d4d4;
+  --ac-primary: #3d3d3d;
+  --ac-primary-hover: #2b2b2b;
+  --ac-on-primary: #ffffff;
+  --ac-accent: #5c5c5c;
+  --ac-on-accent: #ffffff;
+  --ac-ok: #4a4a4a;
+  --ac-warn: #6b6b6b;
+  --ac-bad: #2b2b2b;
+  --ac-info: #5c5c5c;
+  --ac-focus: #1f1f1f;
+  --ac-overlay: rgba(0, 0, 0, 0.4);
+  --ac-primary-text: #3d3d3d;
+  --ac-font-display: "Vazirmatn", Tahoma, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-brand="wireframe"]:not([data-theme="light"]) {
+    --ac-bg: #141414;
+    --ac-surface: #1e1e1e;
+    --ac-surface-2: #282828;
+    --ac-ink: #ececec;
+    --ac-muted: #a3a3a3;
+    --ac-line: #3a3a3a;
+    --ac-primary: #d4d4d4;
+    --ac-primary-hover: #e6e6e6;
+    --ac-on-primary: #141414;
+    --ac-accent: #bdbdbd;
+    --ac-on-accent: #141414;
+    --ac-ok: #c8c8c8;
+    --ac-warn: #a3a3a3;
+    --ac-bad: #ececec;
+    --ac-info: #bdbdbd;
+    --ac-focus: #ececec;
+    --ac-overlay: rgba(0, 0, 0, 0.6);
+    --ac-primary-text: #d4d4d4;
+  }
+}
+
+:root[data-brand="wireframe"][data-theme="dark"] {
+  --ac-bg: #141414;
+  --ac-surface: #1e1e1e;
+  --ac-surface-2: #282828;
+  --ac-ink: #ececec;
+  --ac-muted: #a3a3a3;
+  --ac-line: #3a3a3a;
+  --ac-primary: #d4d4d4;
+  --ac-primary-hover: #e6e6e6;
+  --ac-on-primary: #141414;
+  --ac-accent: #bdbdbd;
+  --ac-on-accent: #141414;
+  --ac-ok: #c8c8c8;
+  --ac-warn: #a3a3a3;
+  --ac-bad: #ececec;
+  --ac-info: #bdbdbd;
+  --ac-focus: #ececec;
+  --ac-overlay: rgba(0, 0, 0, 0.6);
+  --ac-primary-text: #d4d4d4;
+}
+
+/* Phone screens: explicit theme per phone */
+.ac-phone[data-t="light"] {
+  --ac-bg: #faf7f5;
+  --ac-surface: #ffffff;
+  --ac-surface-2: #f4ebe5;
+  --ac-ink: #2a1a12;
+  --ac-muted: #715d54;
+  --ac-line: #ecdfd7;
+  --ac-primary: #c84c0a;
+  --ac-primary-hover: #a63e07;
+  --ac-on-primary: #ffffff;
+  --ac-accent: #6b2d84;
+  --ac-on-accent: #faf7f5;
+  --ac-ok: #167246;
+  --ac-warn: #94590a;
+  --ac-bad: #c0392b;
+  --ac-info: #2b6cb0;
+  --ac-focus: #6b2d84;
+  --ac-overlay: rgba(42, 26, 18, 0.45);
+  --ac-primary-text: #b04208;
+  --ac-font-display: "Lalezar", "Vazirmatn", Tahoma, sans-serif;
+  color-scheme: light;
+}
+
+.ac-phone[data-t="dark"] {
+  --ac-bg: #170f0b;
+  --ac-surface: #22160f;
+  --ac-surface-2: #2c1d14;
+  --ac-ink: #f7ebe3;
+  --ac-muted: #b39a8d;
+  --ac-line: #3e2b21;
+  --ac-primary: #ff8a3d;
+  --ac-primary-hover: #ff9d5c;
+  --ac-on-primary: #2a1103;
+  --ac-accent: #c79bdd;
+  --ac-on-accent: #170f0b;
+  --ac-ok: #4cc38a;
+  --ac-warn: #e0a84a;
+  --ac-bad: #f07167;
+  --ac-info: #6aa8f0;
+  --ac-focus: #c79bdd;
+  --ac-overlay: rgba(0, 0, 0, 0.6);
+  --ac-primary-text: #ff8a3d;
+  --ac-font-display: "Lalezar", "Vazirmatn", Tahoma, sans-serif;
+  color-scheme: dark;
+}
+
+.ac-phone.wf[data-t="light"] {
+  --ac-bg: #f5f5f5;
+  --ac-surface: #ffffff;
+  --ac-surface-2: #ebebeb;
+  --ac-ink: #1f1f1f;
+  --ac-muted: #6b6b6b;
+  --ac-line: #d4d4d4;
+  --ac-primary: #3d3d3d;
+  --ac-primary-hover: #2b2b2b;
+  --ac-on-primary: #ffffff;
+  --ac-accent: #5c5c5c;
+  --ac-on-accent: #ffffff;
+  --ac-ok: #4a4a4a;
+  --ac-warn: #6b6b6b;
+  --ac-bad: #2b2b2b;
+  --ac-info: #5c5c5c;
+  --ac-focus: #1f1f1f;
+  --ac-overlay: rgba(0, 0, 0, 0.4);
+  --ac-primary-text: #3d3d3d;
+  --ac-font-display: "Vazirmatn", Tahoma, sans-serif;
+}
+
+.ac-phone.wf[data-t="dark"] {
+  --ac-bg: #141414;
+  --ac-surface: #1e1e1e;
+  --ac-surface-2: #282828;
+  --ac-ink: #ececec;
+  --ac-muted: #a3a3a3;
+  --ac-line: #3a3a3a;
+  --ac-primary: #d4d4d4;
+  --ac-primary-hover: #e6e6e6;
+  --ac-on-primary: #141414;
+  --ac-accent: #bdbdbd;
+  --ac-on-accent: #141414;
+  --ac-ok: #c8c8c8;
+  --ac-warn: #a3a3a3;
+  --ac-bad: #ececec;
+  --ac-info: #bdbdbd;
+  --ac-focus: #ececec;
+  --ac-overlay: rgba(0, 0, 0, 0.6);
+  --ac-primary-text: #d4d4d4;
+  --ac-font-display: "Vazirmatn", Tahoma, sans-serif;
+}

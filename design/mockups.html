@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Asancart Android Design</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lalezar&family=Vazirmatn:wght@400;500;700;900&display=swap">
+<link rel="stylesheet" href="prototype/theme.css">
+<link rel="stylesheet" href="prototype/app.css">
+<link rel="stylesheet" href="prototype/page.css">
+</head>
+<body>
+<div class="pg">
+  <header class="pg-head">
+    <div class="title">
+      <span id="pg-logo"></span>
+      <div>
+        <p class="eyebrow">Asancart · Android SMS app</p>
+        <h1>Full design</h1>
+        <p class="lede">Saffron &amp; Plum brand, Persian right-to-left, Material 3 structure. Every screen in light and dark, plus a clickable phone.</p>
+      </div>
+    </div>
+    <div class="ctrls">
+      <div class="ctl" role="group" aria-label="View">
+        <button data-view="all" aria-pressed="true">All screens</button><button data-view="proto" aria-pressed="false">Clickable</button>
+      </div>
+      <div class="ctl" role="group" aria-label="Phone theme">
+        <button data-th="both" aria-pressed="true">Light + dark</button><button data-th="light" aria-pressed="false">Light</button><button data-th="dark" aria-pressed="false">Dark</button>
+      </div>
+      <a class="pbtn" data-xlink="wireframe" href="wireframe.html">Wireframe →</a>
+    </div>
+  </header>
+
+  <section id="view-all" aria-label="All screens"></section>
+
+  <section id="view-proto" class="mock-stage" hidden>
+    <div class="side" id="jumplist"></div>
+    <div class="phone-slot"><div id="phone"></div></div>
+    <div class="side">
+      <h3>Colour</h3>
+      <div class="swatches" id="swatches"></div>
+      <h3>Type</h3>
+      <div class="type-s" lang="fa" dir="rtl"><span class="d">۲۵٬۰۰۰٬۰۰۰ ریال</span><span class="b">Lalezar برای عنوان و مبلغ، Vazirmatn برای متن.</span></div>
+      <h3>Prototype</h3>
+      <label class="chk-l"><input type="checkbox" id="offline"> Simulate no connection on test</label>
+      <button class="pbtn" id="restart" style="align-self:flex-start">Restart from first run</button>
+      <p class="small-note">Tap the camera area to simulate the QR scan. Sample data only.</p>
+    </div>
+  </section>
+</div>
+
+<script src="prototype/app.js"></script>
+<script>
+(function () {
+  const P = window.ACProto;
+  const STAGES = ['First run', 'Setup', 'Daily use'];
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  let view = 'all';
+  const SW = [['bg', 'Background'], ['surface', 'Surface'], ['primary', 'Primary · saffron'], ['accent', 'Accent · plum'], ['ink', 'Ink'], ['muted', 'Muted'], ['ok', 'OK'], ['bad', 'Error']];
+  let th = 'both';
+
+  document.getElementById('pg-logo').innerHTML = P.renderStatic('welcome', {}).match(/<svg viewBox="40 110[\s\S]*?<\/svg>/)[0];
+
+  function drawGallery() {
+    const themes = th === 'both' ? ['light', 'dark'] : [th];
+    document.getElementById('view-all').innerHTML = STAGES.map((st) => {
+      const ids = P.ORDER.filter((id) => P.SCREENS[id].stage === st);
+      return `<div class="stagehead"><h2>${st}</h2><hr></div>
+        <div class="gal ${themes.length > 1 ? 'pair' : ''}" style="margin-top:20px;margin-bottom:28px">${ids.map((id) => `
+          <figure>
+            <div class="jump" role="button" tabindex="0" data-open="${id}" aria-label="Open ${esc(P.SCREENS[id].name)} in the clickable phone">
+              <div class="phones">${themes.map((t) => `<div class="zoom">${P.renderStatic(id, { skin: 'brand', theme: t })}</div>`).join('')}</div>
+            </div>
+            <figcaption><b>${esc(P.SCREENS[id].name)}</b><span lang="fa" dir="rtl">${esc(P.SCREENS[id].fa)}</span></figcaption>
+          </figure>`).join('')}</div>`;
+    }).join('');
+  }
+
+  const proto = P.create({ skin: 'brand', theme: 'light', onChange: mark, onTheme: (t) => setTh(t === 'system' ? 'light' : t) });
+  proto.mount(document.getElementById('phone'));
+
+  document.getElementById('jumplist').innerHTML = STAGES.map((st) => `<h3>${st}</h3><div class="chips" style="display:flex;flex-wrap:wrap;gap:6px">${
+    P.ORDER.filter((id) => P.SCREENS[id].stage === st).map((id) => `<button class="sc" data-jump="${id}">${esc(P.SCREENS[id].name)}</button>`).join('')}</div>`).join('');
+
+  function drawSwatches() {
+    const holder = document.querySelector('#phone .ac-phone');
+    const cs = holder ? getComputedStyle(holder) : null;
+    document.getElementById('swatches').innerHTML = SW.map(([k, l]) => `<div class="sw-i"><i style="background:${cs ? cs.getPropertyValue('--ac-' + k) : 'var(--ac-' + k + ')'}"></i><span>${l}</span></div>`).join('');
+  }
+
+  function mark(id) {
+    document.querySelectorAll('[data-jump].sc').forEach((b) => b.setAttribute('aria-current', String(b.dataset.jump === id)));
+    drawSwatches();
+  }
+
+  function setView(v) {
+    view = v;
+    document.getElementById('view-all').hidden = v !== 'all';
+    document.getElementById('view-proto').hidden = v !== 'proto';
+    document.querySelectorAll('[data-view]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.view === v)));
+    const bothBtn = document.querySelector('[data-th="both"]');
+    bothBtn.hidden = v === 'proto';
+    if (v === 'proto' && th === 'both') setTh('light');
+  }
+  function setTh(t) {
+    th = t;
+    document.querySelectorAll('[data-th]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.th === t)));
+    if (t !== 'both') proto.setTheme(t);
+    drawGallery();
+    drawSwatches();
+  }
+
+  document.querySelectorAll('[data-view]').forEach((b) => b.addEventListener('click', () => setView(b.dataset.view)));
+  document.querySelectorAll('[data-th]').forEach((b) => b.addEventListener('click', () => setTh(b.dataset.th)));
+  document.getElementById('offline').addEventListener('change', (e) => proto.setFlag('offline', e.target.checked));
+  document.getElementById('restart').addEventListener('click', () => proto.reset());
+  document.addEventListener('click', (e) => {
+    const o = e.target.closest('[data-open]');
+    if (o) { setView('proto'); proto.jump(o.dataset.open); window.scrollTo({ top: 0 }); return; }
+    const j = e.target.closest('[data-jump]');
+    if (j) proto.jump(j.dataset.jump);
+  });
+
+  document.addEventListener('keydown', (e) => {
+    const o = e.target.closest && e.target.closest('[data-open]');
+    if (o && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); o.click(); }
+  });
+  drawGallery();
+  drawSwatches();
+})();
+</script>
+</body>
+</html>
