@@ -6,6 +6,8 @@ Status: design. No app code yet.
 
 ## Design
 
+View online: **[asancart.github.io/android](https://asancart.github.io/android/)** ([wireframe](https://asancart.github.io/android/wireframe.html), [full design](https://asancart.github.io/android/mockups.html)).
+
 | Path | What |
 |---|---|
 | [`design/wireframe.html`](design/wireframe.html) | Grayscale clickable wireframe with notes per screen: what it does, which spec it follows, open points |

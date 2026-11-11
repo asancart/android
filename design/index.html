@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Asancart Android Design</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lalezar&family=Vazirmatn:wght@400;500;700;900&display=swap">
+<link rel="stylesheet" href="prototype/theme.css">
+<link rel="stylesheet" href="prototype/page.css">
+<style>
+  .pick { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  .pick a {
+    display: flex; flex-direction: column; gap: 6px; padding: 22px; border-radius: 18px;
+    background: var(--ac-surface); border: 1px solid var(--ac-line); color: var(--ac-ink); text-decoration: none;
+  }
+  .pick a:hover { border-color: var(--ac-primary); }
+  .pick b { font: 400 26px/1.2 var(--ac-font-display); }
+  .pick span { color: var(--ac-muted); }
+  .pick .go { color: var(--ac-primary-text); font-weight: 700; margin-top: 6px; }
+  .foot-note { color: var(--ac-muted); font-size: 14px; }
+  .foot-note a { color: var(--ac-primary-text); }
+  @media (max-width: 640px) { .pick { grid-template-columns: minmax(0, 1fr); } }
+</style>
+</head>
+<body>
+<div class="pg" style="max-width: 820px">
+  <header class="pg-head">
+    <div class="title">
+      <svg viewBox="40 110 432 290" role="img" aria-label="Asancart"><path fill="var(--ac-primary)" fill-rule="evenodd" d="M75.56,123.79 73.37,124.15 71.2,124.66 69.07,125.3 66.99,126.09 64.96,127.01 63,128.06 61.11,129.23 59.3,130.53 57.58,131.94 55.96,133.46 54.44,135.08 53.03,136.8 51.73,138.61 50.56,140.5 49.51,142.46 48.59,144.49 47.8,146.57 47.16,148.7 46.65,150.87 46.29,153.06 46.07,155.28 46,157.5 46,354.5 46.07,356.72 46.29,358.94 46.65,361.13 47.16,363.3 47.8,365.43 48.59,367.51 49.51,369.54 50.56,371.5 51.73,373.39 53.03,375.2 54.44,376.92 55.96,378.54 57.58,380.06 59.3,381.47 61.11,382.77 63,383.94 64.96,384.99 66.99,385.91 69.07,386.7 71.2,387.34 73.37,387.85 75.56,388.21 77.78,388.43 80,388.5 236.04,388.5 268.73,275 215.2,275 254.52,123.5 80,123.5 77.78,123.57ZM166,189.67 142,189.67 142,194.67 166,194.67 166,210.33 142,210.33 142,215.33 166,215.33 166,220.5 165.97,221.35 165.89,222.2 165.75,223.04 165.56,223.86 165.31,224.68 165.01,225.47 164.66,226.25 164.26,227 163.81,227.72 163.31,228.41 162.77,229.07 162.19,229.69 161.57,230.27 160.91,230.81 160.22,231.31 159.5,231.76 158.75,232.16 157.97,232.51 157.18,232.81 156.36,233.06 155.54,233.25 154.7,233.39 153.85,233.47 153,233.5 128.5,233.5 128.5,171.5 153,171.5 153.85,171.53 154.7,171.61 155.54,171.75 156.36,171.94 157.18,172.19 157.97,172.49 158.75,172.84 159.5,173.24 160.22,173.69 160.91,174.19 161.57,174.73 162.19,175.31 162.77,175.93 163.31,176.59 163.81,177.28 164.26,178 164.66,178.75 165.01,179.53 165.31,180.32 165.56,181.14 165.75,181.96 165.89,182.8 165.97,183.65 166,184.5ZM86,215.33 110,215.33 110,210.33 86,210.33 86,194.67 110,194.67 110,189.67 86,189.67 86,184.5 86.03,183.65 86.11,182.8 86.25,181.96 86.44,181.14 86.69,180.32 86.99,179.53 87.34,178.75 87.74,178 88.19,177.28 88.69,176.59 89.23,175.93 89.81,175.31 90.43,174.73 91.09,174.19 91.78,173.69 92.5,173.24 93.25,172.84 94.03,172.49 94.82,172.19 95.64,171.94 96.46,171.75 97.3,171.61 98.15,171.53 99,171.5 123.5,171.5 123.5,233.5 99,233.5 98.15,233.47 97.3,233.39 96.46,233.25 95.64,233.06 94.82,232.81 94.03,232.51 93.25,232.16 92.5,231.76 91.78,231.31 91.09,230.81 90.43,230.27 89.81,229.69 89.23,229.07 88.69,228.41 88.19,227.72 87.74,227 87.34,226.25 86.99,225.47 86.69,224.68 86.44,223.86 86.25,223.04 86.11,222.2 86.03,221.35 86,220.5Z"/><path fill="var(--ac-accent)" fill-rule="evenodd" d="M434.22,388.43 436.44,388.21 438.63,387.85 440.8,387.34 442.93,386.7 445.01,385.91 447.04,384.99 449,383.94 450.89,382.77 452.7,381.47 454.42,380.06 456.04,378.54 457.56,376.92 458.97,375.2 460.27,373.39 461.44,371.5 462.49,369.54 463.41,367.51 464.2,365.43 464.84,363.3 465.35,361.13 465.71,358.94 465.93,356.72 466,354.5 466,157.5 465.93,155.28 465.71,153.06 465.35,150.87 464.84,148.7 464.2,146.57 463.41,144.49 462.49,142.46 461.44,140.5 460.27,138.61 458.97,136.8 457.56,135.08 456.04,133.46 454.42,131.94 452.7,130.53 450.89,129.23 449,128.06 447.04,127.01 445.01,126.09 442.93,125.3 440.8,124.66 438.63,124.15 436.44,123.79 434.22,123.57 432,123.5 281.38,123.5 248.8,249 303.27,249 263.1,388.5 432,388.5Z"/></svg>
+      <div>
+        <p class="eyebrow">Asancart · Android SMS app</p>
+        <h1>Design and wireframe</h1>
+        <p class="lede">The open-source app that reads bank deposit SMS on the shop owner's phone and reports them to Asancart. Both pages are clickable and use sample data only.</p>
+      </div>
+    </div>
+  </header>
+  <nav class="pick">
+    <a href="wireframe.html"><b>Wireframe</b><span>Grayscale. How each screen works, with notes and spec links per screen.</span><span class="go">Open wireframe →</span></a>
+    <a href="mockups.html"><b>Full design</b><span>Every screen in light and dark, plus a clickable phone.</span><span class="go">Open design →</span></a>
+  </nav>
+  <p class="foot-note">Source: <a href="https://github.com/asancart/android">github.com/asancart/android</a> · decisions in <a href="https://github.com/asancart/android/blob/main/docs/design-brief.md">docs/design-brief.md</a></p>
+</div>
+</body>
+</html>
