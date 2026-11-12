@@ -17,7 +17,7 @@ for f in "$@"; do
     echo "FAIL $f: missing or empty"; status=1; continue
   fi
   # Guard against checking the wrong file: it must be this app's manifest.
-  if ! grep -q 'org\.asancart\.android' "$f"; then
+  if ! grep -q 'io\.github\.asancart\.android' "$f"; then
     echo "FAIL $f: not the Asancart app manifest"; status=1; continue
   fi
   # Only real entries count: XML comments are blanked (newlines kept, so line numbers still match).
