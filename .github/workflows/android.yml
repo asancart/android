@@ -72,6 +72,14 @@ jobs:
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
 
+      # Unsigned (release signing is T4.5), so not installable; uploaded for identity and manifest checks.
+      - name: Upload release APK (unsigned)
+        uses: actions/upload-artifact@v7
+        with:
+          name: asancart-release-unsigned-apk
+          path: app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+
       - name: Upload screenshots
         if: always()
         uses: actions/upload-artifact@v7
