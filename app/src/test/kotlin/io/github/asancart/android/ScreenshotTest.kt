@@ -1,8 +1,12 @@
 package io.github.asancart.android
 
 import android.graphics.Bitmap
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.test.captureToImage
@@ -18,6 +22,7 @@ import io.github.asancart.android.ui.activity.UnparsedDetailScreen
 import io.github.asancart.android.ui.permissions.PermissionStatus
 import io.github.asancart.android.ui.permissions.PermissionsScreen
 import io.github.asancart.android.ui.Tab
+import io.github.asancart.android.ui.theme.AcTheme
 import io.github.asancart.android.ui.theme.AsancartTheme
 import io.github.asancart.android.ui.welcome.WelcomeScreen
 import org.junit.Rule
@@ -91,7 +96,8 @@ class ScreenshotTest {
         val app = container
         rule.setContent {
             CompositionLocalProvider(LocalAppContainer provides app, LocalLayoutDirection provides LayoutDirection.Rtl) {
-                AsancartTheme(dark = dark, content = content)
+                // Screens drawn alone get the theme background the app's shell gives them.
+                AsancartTheme(dark = dark) { Box(Modifier.fillMaxSize().background(AcTheme.colors.bg)) { content() } }
             }
         }
         rule.waitForIdle()

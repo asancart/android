@@ -52,7 +52,7 @@ fun UnparsedDetailScreen(u: UnparsedSms, onBack: () -> Unit, onReread: () -> Uni
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     LeadIcon(R.drawable.ic_sms, Tone.WARN)
                     Column(Modifier.weight(1f)) {
-                        Text("⁦${u.sender}⁩", style = AcTheme.type.title)
+                        Text("\u2066${u.sender}\u2069", style = AcTheme.type.title)
                         Text(TimeFormat.smsTime(context, u.receivedAt), style = AcTheme.type.caption, color = c.muted)
                     }
                 }
@@ -89,7 +89,7 @@ private fun KeyValue(key: String, value: String) {
     Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
         Text(key, style = AcTheme.type.small, color = AcTheme.colors.muted)
         // Template names are Latin layout keys; keep them LTR inside the RTL line.
-        Text("⁦$value⁩", style = AcTheme.type.small, modifier = Modifier.weight(1f))
+        Text("\u2066$value\u2069", style = AcTheme.type.small, modifier = Modifier.weight(1f))
     }
 }
 

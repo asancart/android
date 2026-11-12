@@ -112,7 +112,7 @@ private fun UnparsedRow(u: UnparsedSms, divider: Boolean, onClick: () -> Unit) {
             // The SMS text stays on this phone (DEC-003); showing it here is local.
             Text(previewLine(u.body), style = AcTheme.type.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(
-                "⁦${u.sender}⁩ · ${TimeFormat.smsTime(context, u.receivedAt)} · ${stringResource(u.reason.label())}",
+                "\u2066${u.sender}\u2069 · ${TimeFormat.smsTime(context, u.receivedAt)} · ${stringResource(u.reason.label())}",
                 style = AcTheme.type.small,
                 color = AcTheme.colors.muted,
                 maxLines = 1,
