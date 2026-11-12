@@ -60,12 +60,13 @@ object LogRedactor {
             uuids += m.value
             "\u0000${uuids.size - 1}\u0000"
         }
-        s = PAIRING_CODE.replace(s, REDACTED)
-        s = DEVICE_CREDENTIAL.replace(s, REDACTED)
-        s = OPAQUE_TOKEN.replace(s, REDACTED)
+        // Numbers with a known shape first: a dashed card number also fits the pairing-code shape.
         s = SHEBA.replace(s) { m -> "IR" + "*".repeat(20) + m.groupValues[1].filter(Char::isDigit).takeLast(4) }
         s = CARD.replace(s) { m -> m.groupValues[1] + "********" + m.groupValues[4] }
         s = PHONE.replace(s) { m -> "*******" + m.value.filter(Char::isDigit).takeLast(4) }
+        s = PAIRING_CODE.replace(s, REDACTED)
+        s = DEVICE_CREDENTIAL.replace(s, REDACTED)
+        s = OPAQUE_TOKEN.replace(s, REDACTED)
         s = LONG_NUMBER.replace(s) { m -> if (m.value.contains('*')) m.value else "<number>" }
         uuids.forEachIndexed { i, u -> s = s.replace("\u0000$i\u0000", u) }
         return s
