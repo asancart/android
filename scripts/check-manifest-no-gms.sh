@@ -20,7 +20,8 @@ for f in "$@"; do
   if ! grep -q 'org\.asancart\.android' "$f"; then
     echo "FAIL $f: not the Asancart app manifest"; status=1; continue
   fi
-  if hits=$(grep -nE "$forbidden" "$f"); then
+  # Only real entries count: XML comments are blanked (newlines kept, so line numbers still match).
+  if hits=$(perl -0pe 's/<!--.*?-->/my $c = $&; $c =~ tr{\n}{}cd; $c/gse' "$f" | grep -nE "$forbidden"); then
     echo "FAIL $f: REQ-APP-041, entries that reach Google Play Services or Firebase:"
     echo "$hits"
     status=1
