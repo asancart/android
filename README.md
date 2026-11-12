@@ -6,15 +6,18 @@ Status: app scaffold. Kotlin and Jetpack Compose, Persian right-to-left UI, Asan
 
 ## Build
 
+App identity (DEC-035): application ID and Kotlin package `io.github.asancart.android` (debug builds add `.debug`), Apache-2.0, minSdk 24 (Android 7.0). The ID is fixed from the first published APK.
+
+
 Needs JDK 21 (17 or newer works), the Android SDK with platform 37, and access to Google's Maven repository.
 
 ```sh
-./gradlew :core:test :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
+./gradlew :core:test :app:testDebugUnitTest :app:lintDebug :app:assembleDebug :app:assembleRelease
 ```
 
 The Platform address is a build setting, not code: release builds use `https://api.asancart.org`, debug builds a local backend, by default `http://10.0.2.2:8080` (the dev machine as seen from the Android emulator). Change it with `-Pasancart.platformApiUrl=<url>` or in `~/.gradle/gradle.properties`.
 
-The debug APK lands in `app/build/outputs/apk/debug/`. Screen captures from the unit tests land in `app/build/outputs/screenshots/`. CI ([`.github/workflows/android.yml`](.github/workflows/android.yml)) runs the same tasks on every pull request and uploads the signed debug APK and the screenshots as artifacts.
+The debug APK lands in `app/build/outputs/apk/debug/`, the unsigned release APK in `app/build/outputs/apk/release/`. Screen captures from the unit tests land in `app/build/outputs/screenshots/`. CI ([`.github/workflows/android.yml`](.github/workflows/android.yml)) runs the same tasks on every pull request and uploads the signed debug APK and the screenshots as artifacts.
 
 ## Layout
 
