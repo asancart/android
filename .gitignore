@@ -18,3 +18,4 @@ captures/
 
 # Local agent definitions (copied in per checkout, never published)
 .claude/
+__pycache__/
