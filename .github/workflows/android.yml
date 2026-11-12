@@ -46,8 +46,9 @@ jobs:
           aapt2="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)/aapt2"
           check() {
             badging=$("$aapt2" dump badging "$1")
-            pkg=$(echo "$badging" | sed -n "s/^package: name='\([^']*\)'.*/\1/p")
-            min=$(echo "$badging" | sed -n "s/^sdkVersion:'\([0-9]*\)'.*/\1/p")
+            pkg=$(echo "$badging" | sed -n -E "s/^package: name='([^']*)'.*/\1/p")
+            # build-tools 36 prints minSdkVersion:'24'; older ones sdkVersion:'24'.
+            min=$(echo "$badging" | sed -n -E "s/^(minSdkVersion|sdkVersion):'([0-9]+)'.*/\2/p" | head -1)
             echo "$1: package=$pkg minSdk=$min"
             [ "$pkg" = "$2" ] && [ "$min" = "24" ] || { echo "expected package $2 and minSdk 24"; return 1; }
           }
