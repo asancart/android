@@ -28,6 +28,24 @@ class LogRedactorTest {
     }
 
     @Test
+    fun pairingCodesAndCredentialsInPlainTextAreRemoved() {
+        // QA's cases: secrets that are not written as key=value.
+        val pairing = LogRedactor.redact("pairing code K7QM-2XPA expired")
+        leaks("K7QM-2XPA", pairing)
+        val invalid = LogRedactor.redact("PAIRING_INVALID for K7QM-2XPA")
+        leaks("K7QM-2XPA", invalid)
+        assertTrue(invalid, invalid.startsWith("PAIRING_INVALID for "))
+        leaks("k7qm-2xpa", LogRedactor.redact("code k7qm-2xpa typed by hand"))
+        leaks("dvc_9f8e7d6c5b4a3210", LogRedactor.redact("credential dvc_9f8e7d6c5b4a3210 was revoked"))
+        leaks("dvc_9f8e7d6c5b4a3210", LogRedactor.redact("got dvc_9f8e7d6c5b4a3210 from pair"))
+        leaks("Q2xhdWRlUmVkYWN0aW9uVGVzdDEyMzQ1Ng", LogRedactor.redact("raw Q2xhdWRlUmVkYWN0aW9uVGVzdDEyMzQ1Ng in body"))
+        // The dashboard QR payload (dashboard-api.md), as a JSON parse error would print it.
+        val qr = LogRedactor.redact("bad QR {\"v\":1,\"url\":\"https://api.asancart.org\",\"code\":\"K7QM-2XPA\",\"cards\":[{\"card_id\":\"c1\"}]}")
+        leaks("K7QM-2XPA", qr)
+        assertTrue(qr, qr.contains("https://api.asancart.org"))
+    }
+
+    @Test
     fun secretFieldNamesLoseTheirValue() {
         for (key in listOf("device_credential", "token", "callback_secret", "password", "otp", "pairing_code", "sms_body", "text", "balance", "account")) {
             assertEquals(LogRedactor.REDACTED, LogRedactor.redactField(key, "anything 123"))
@@ -51,6 +69,8 @@ class LogRedactorTest {
         assertEquals("card 6037********5678", LogRedactor.redact("card 6037-9912-3456-5678"))
         assertEquals("tel *******4567", LogRedactor.redact("tel 09121234567"))
         assertEquals("tel *******4567", LogRedactor.redact("tel +989121234567"))
+        assertEquals("tel *******4567", LogRedactor.redact("tel 0912 123 4567"))
+        assertEquals("tel *******4567", LogRedactor.redact("tel +98 912-123-4567"))
         val sheba = LogRedactor.redact("to IR820540102680020817909002")
         leaks("0540102680020817909002", sheba)
         assertTrue(sheba, sheba.endsWith("9002"))

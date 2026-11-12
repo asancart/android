@@ -62,8 +62,10 @@ class FileLog(
     private fun append(line: String) {
         try {
             if (!dir.exists()) dir.mkdirs()
-            if (current.exists() && current.length() + line.length > maxBytes) rotate()
-            current.appendText(line)
+            // Bytes, not characters: no file passes maxBytes, whatever the script.
+            val bytes = line.toByteArray(Charsets.UTF_8)
+            if (current.exists() && current.length() + bytes.size > maxBytes) rotate()
+            current.appendBytes(bytes)
         } catch (_: Exception) {
             // Logging never takes the app down.
         }

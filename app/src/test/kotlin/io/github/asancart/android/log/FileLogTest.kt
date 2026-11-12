@@ -27,6 +27,16 @@ class FileLogTest {
     }
 
     @Test
+    fun filesRollByBytesNotCharacters() {
+        // Multi-byte characters (here the bullets of a masked card number, 3 bytes each in UTF-8).
+        val log = FileLog(tmp.newFolder("bytes"), env = "test", maxFiles = 5, maxBytes = 1_000)
+        repeat(100) { log.info("event", "masked" to "6037 99\u2022\u2022 \u2022\u2022\u2022\u2022 4821".repeat(4)) }
+        log.flush()
+        assertTrue(log.files().all { it.length() <= 1_000 })
+        assertEquals(5, log.files().size)
+    }
+
+    @Test
     fun linesAreJsonAndRedacted() {
         val log = FileLog(tmp.newFolder("logs2"), env = "test", clock = { Instant.parse("2026-11-12T10:00:00Z") })
         log.warn("templates_refresh_failed", "http" to 503, "device_credential" to "dvc_secret_123")
