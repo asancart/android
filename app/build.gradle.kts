@@ -19,6 +19,13 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "0.1.0"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    // The Parser Template fixtures, shared with :core's JVM tests, as assets of the instrumented
+    // tests: the same suite runs on the device's regex engine (T4.2).
+    sourceSets.named("androidTest") {
+        assets.directories += "../fixtures"
     }
 
     buildTypes {
@@ -104,7 +111,14 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.robolectric)
+    testImplementation(testFixtures(project(":core")))
     testImplementation(platform(libs.compose.bom))
     testImplementation(libs.compose.ui.test.junit4)
     debugImplementation(libs.compose.ui.test.manifest)
+
+    androidTestImplementation(testFixtures(project(":core")))
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.rules)
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.junit)
 }

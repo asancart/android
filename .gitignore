@@ -18,3 +18,8 @@ captures/
 
 # Local agent definitions (copied in per checkout, never published)
 .claude/
+
+# Parser Template fixtures and the official templates come from the private Asancart documents
+# repository. They are copied locally by scripts/sync-parser-templates.sh and never published here.
+/fixtures/
+/core/src/main/resources/io/github/asancart/android/core/deviceapi/official-parser-templates.json

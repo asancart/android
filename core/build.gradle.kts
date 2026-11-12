@@ -4,6 +4,9 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 // (normalization and template engine fixtures in T4.2, queue rules in T4.4).
 plugins {
     alias(libs.plugins.kotlin.jvm)
+    // The Parser Template fixture suite lives in testFixtures, so the same code runs as JVM unit
+    // tests here and as instrumented tests on Android (app androidTest).
+    `java-test-fixtures`
 }
 
 java {
@@ -26,8 +29,14 @@ configurations.configureEach {
     }
 }
 
+// Parser Template fixtures: a local copy from the private Asancart documents (scripts/sync-parser-templates.sh),
+// never committed. The fixture tests skip when it is missing.
+sourceSets.named("test") { resources.srcDir(rootProject.file("fixtures")) }
+
 dependencies {
     api(libs.kotlinx.coroutines.core)
+    implementation(libs.kotlinx.serialization.json)
+    testFixturesImplementation(libs.kotlinx.serialization.json)
 
     testImplementation(kotlin("test-junit"))
     testImplementation(libs.junit)

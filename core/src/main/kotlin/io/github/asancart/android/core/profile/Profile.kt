@@ -5,6 +5,7 @@ import io.github.asancart.android.core.deviceapi.Card
 import io.github.asancart.android.core.deviceapi.ShopRef
 import io.github.asancart.android.core.heartbeat.HeartbeatSetting
 import java.net.URI
+import java.time.Instant
 
 /**
  * A Profile: one API target with its Device credential, Shop, Card Bindings, heartbeat setting and
@@ -23,7 +24,15 @@ data class Profile(
     val heartbeat: HeartbeatSetting = HeartbeatSetting.DEFAULT,
     /** REQ-APP-027: on = capture and send; off = ignore SMS, send nothing. */
     val enabled: Boolean = false,
-)
+    /**
+     * When the switch was last turned on. An SMS received before it is never captured for this
+     * Profile, also not by the inbox re-scan (REQ-APP-011): off means off.
+     */
+    val enabledAt: Instant? = null,
+) {
+    /** True when an SMS received at [time] belongs to this Profile's capture. */
+    fun captures(time: Instant): Boolean = enabled && (enabledAt == null || !time.isBefore(enabledAt))
+}
 
 /**
  * An API target (REQ-APP-001): the Platform, or another service with a base URL typed by the user

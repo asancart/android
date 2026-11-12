@@ -62,4 +62,63 @@
 
     <string name="license_name" translatable="false">Apache-2.0</string>
     <string name="source_url" translatable="false">github.com/asancart/android</string>
+
+    <string name="back">بازگشت</string>
+    <string name="home_unparsed_title">%1$s پیامک شناخته نشد</string>
+    <string name="home_unparsed_body">بررسی کنید تا واریزی از قلم نیفتد.</string>
+    <string name="activity_reread_all">قالب‌ها را به‌روز کن و همه را دوباره بخوان</string>
+    <string name="unparsed_title">پیامک شناخته‌نشده</string>
+    <string name="unparsed_local_only">این متن فقط روی همین گوشی است و به هیچ سرویسی فرستاده نشده.</string>
+    <string name="unparsed_why">چرا خوانده نشد؟</string>
+    <string name="unparsed_templates_tried">قالب‌های بررسی‌شده</string>
+    <string name="unparsed_result">نتیجه</string>
+    <string name="unparsed_none_tried">هیچ</string>
+    <string name="unparsed_what_now">چه کار کنم؟</string>
+    <string name="unparsed_reread">قالب‌ها را به‌روز کن و دوباره بخوان</string>
+    <string name="unparsed_reread_sub">اگر قالب تازه‌ای منتشر شده باشد، واریز ارسال می‌شود.</string>
+    <string name="unparsed_dismiss">واریز نیست، حذفش کن</string>
+    <string name="reason_short_no_match">با هیچ قالبی جور نشد</string>
+    <string name="reason_short_bad_amount">مبلغ خوانده نشد</string>
+    <string name="reason_short_direction">نوع تراکنش شناخته نشد</string>
+    <string name="reason_short_missing_field">اطلاعات لازم بانک در پیامک نیست</string>
+    <string name="reason_short_ambiguous">دو شنونده یک فرستنده دارند</string>
+    <string name="reason_short_no_templates">قالبی برای این فرستنده نیست</string>
+    <string name="reason_short_no_binding">شنونده‌ای برای این فرستنده نیست</string>
+    <string name="reason_no_match">متن با هیچ‌کدام از قالب‌های این فرستنده جور نشد. احتمالاً بانک شکل پیامک را عوض کرده است.</string>
+    <string name="reason_bad_amount">یک قالب متن را خواند، ولی مبلغ آن یک عدد درست نبود.</string>
+    <string name="reason_direction">یک قالب متن را خواند، ولی نوع تراکنش نه در فهرست واریزهاست و نه در فهرست برداشت‌ها.</string>
+    <string name="reason_missing_field">این پیامک واریز است، ولی این بانک برای ثبت واریز کد پیگیری لازم دارد و پیامک آن را ندارد.</string>
+    <string name="reason_ambiguous">در این پروفایل دو شنونده کارت این فرستنده را گوش می‌دهند و معلوم نیست واریز مال کدام کارت است. کارت‌ها را در یک شنونده بگذارید.</string>
+    <string name="reason_no_templates">هنوز هیچ قالبی برای این فرستنده روی گوشی نیست. قالب‌ها را به‌روز کنید.</string>
+    <string name="reason_no_binding">این پروفایل دیگر شنونده‌ای برای این فرستنده ندارد.</string>
+    <string name="time_today">امروز %1$s</string>
+    <string name="time_yesterday">دیروز %1$s</string>
+
+    <string name="settings_section_app">برنامه</string>
+    <string name="settings_permissions">دسترسی‌ها</string>
+    <string name="settings_permissions_missing">%1$s دسترسی لازم داده نشده</string>
+    <string name="settings_permissions_ok">همه دسترسی‌های لازم داده شده</string>
+    <string name="permissions_title">دسترسی‌ها</string>
+    <string name="permissions_intro">برنامه برای کار در پس‌زمینه به این‌ها نیاز دارد. سه مورد اول لازم است.</string>
+    <string name="perm_receive">دریافت پیامک</string>
+    <string name="perm_receive_why">پیامک تازه بانک را همان لحظه می‌گیرد، حتی وقتی برنامه بسته است.</string>
+    <string name="perm_read">خواندن صندوق پیامک</string>
+    <string name="perm_read_why">پیامک‌هایی را که وقتی گوشی خاموش بود یا برنامه متوقف شده بود رسیده‌اند، دوباره بررسی می‌کند.</string>
+    <string name="perm_battery">بدون محدودیت باتری</string>
+    <string name="perm_battery_why">نمی‌گذارد اندروید برای صرفه‌جویی، برنامه را متوقف کند.</string>
+    <string name="perm_notif">اعلان‌ها</string>
+    <string name="perm_notif_why">اگر ارسال گیر کند یا پیامکی شناخته نشود، خبرتان می‌کند.</string>
+    <string name="perm_autostart">اجرای خودکار</string>
+    <string name="perm_autostart_why">بعضی گوشی‌ها (شیائومی، هواوی، اوپو) این را جدا دارند. برنامه نمی‌تواند وضعیتش را بخواند؛ بعد از روشن کردن، تأیید کنید.</string>
+    <string name="perm_granted">داده شده</string>
+    <string name="perm_required">لازم</string>
+    <string name="perm_recommended">توصیه‌شده</string>
+    <string name="perm_unchecked">بررسی نشده</string>
+    <string name="perm_locked">قفل شده</string>
+    <string name="perm_allow">اجازه دادن</string>
+    <string name="perm_open_settings">باز کردن تنظیمات</string>
+    <string name="perm_autostart_done">روشن کردم</string>
+    <string name="perm_sms_locked">اندروید دسترسی پیامک را برای این برنامه قفل کرده یا برای همیشه رد کرده است. در صفحه اطلاعات برنامه، منوی ⋮ و بعد «اجازه به تنظیمات محدودشده» را بزنید و تأیید کنید، بعد در «مجوزها» پیامک را مجاز کنید. اگر این گزینه را نمی‌بینید، اول یک بار پیامک را همان‌جا مجاز کنید تا اندروید پیام تنظیم محدودشده را نشان دهد؛ بعد گزینه پیدا می‌شود.</string>
+    <string name="perm_open_app_info">باز کردن اطلاعات برنامه</string>
+    <string name="perm_camera_note">دسترسی دوربین فقط موقع اسکن کد QR پرسیده می‌شود.</string>
 </resources>

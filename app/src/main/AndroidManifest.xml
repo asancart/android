@@ -1,7 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- No permissions yet: SMS permissions arrive with capture (T4.2); no INTERNET while BLK-001 holds. -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Capture (REQ-APP-010, REQ-APP-011, REQ-APP-026). No INTERNET yet: sending comes with T4.3/T4.4. -->
+    <uses-permission android:name="android.permission.RECEIVE_SMS" />
+    <uses-permission android:name="android.permission.READ_SMS" />
+    <!-- Permissions screen (REQ-APP-026): battery optimization exemption, notifications. -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- The app reads SMS on a phone with a SIM; it is not for devices without telephony. -->
+    <uses-feature android:name="android.hardware.telephony" android:required="false" />
 
     <application
         android:name=".AsancartApp"
@@ -23,6 +32,16 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- REQ-APP-010: capture works while the app is closed. Only the system may deliver it. -->
+        <receiver
+            android:name=".capture.SmsReceiver"
+            android:exported="true"
+            android:permission="android.permission.BROADCAST_SMS">
+            <intent-filter>
+                <action android:name="android.provider.Telephony.SMS_RECEIVED" />
+            </intent-filter>
+        </receiver>
 
         <!-- REQ-APP-041: emoji2's startup initializer asks the system downloadable-font provider
              (androidx.content.action.LOAD_EMOJI_FONT) for an emoji font, and on most phones that

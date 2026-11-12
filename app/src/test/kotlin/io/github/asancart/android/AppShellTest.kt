@@ -72,12 +72,17 @@ class AppShellTest {
     }
 
     @Test
-    fun manifestAsksForNoNetworkOrSmsPermissionYet() {
-        val info = rule.activity.packageManager.getPackageInfo(rule.activity.packageName, PackageManager.GET_PERMISSIONS)
+    fun manifestAsksForSmsButNotForNetworkYet() {
+        val pm = rule.activity.packageManager
+        val info = pm.getPackageInfo(rule.activity.packageName, PackageManager.GET_PERMISSIONS or PackageManager.GET_RECEIVERS)
         val requested = info.requestedPermissions.orEmpty().toSet()
-        // BLK-001: no networking. SMS permissions come with capture (T4.2).
-        for (p in listOf(Manifest.permission.INTERNET, Manifest.permission.RECEIVE_SMS, Manifest.permission.READ_SMS)) {
-            assertFalse("$p must not be requested yet", p in requested)
-        }
+        // REQ-APP-010, REQ-APP-011: capture. Sending (INTERNET) comes with T4.3/T4.4.
+        assertTrue(Manifest.permission.RECEIVE_SMS in requested)
+        assertTrue(Manifest.permission.READ_SMS in requested)
+        assertFalse(Manifest.permission.INTERNET in requested)
+        // Only the system can deliver SMS_RECEIVED to the receiver.
+        val receiver = info.receivers.orEmpty().single { it.name.endsWith(".capture.SmsReceiver") }
+        assertEquals(Manifest.permission.BROADCAST_SMS, receiver.permission)
+        assertTrue(receiver.exported)
     }
 }

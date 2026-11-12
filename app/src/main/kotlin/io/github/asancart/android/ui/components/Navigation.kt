@@ -32,11 +32,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import io.github.asancart.android.ui.format.PersianFormat
 import io.github.asancart.android.ui.theme.AcShapes
 import io.github.asancart.android.ui.theme.AcTheme
 import io.github.asancart.android.ui.theme.mix
 
-data class NavItem<T>(val key: T, val label: String, @param:DrawableRes val icon: Int)
+/** [badge] > 0 shows a count on the icon (design: unparsed SMS on Activity). */
+data class NavItem<T>(val key: T, val label: String, @param:DrawableRes val icon: Int, val badge: Int = 0)
 
 /** `.nav`: bottom navigation of the four tabs (design C8). */
 @Composable
@@ -69,6 +71,20 @@ fun <T> BottomNav(items: List<NavItem<T>>, selected: T, onSelect: (T) -> Unit) {
                         contentAlignment = Alignment.Center,
                     ) {
                         AcIcon(item.icon, tint = if (on) c.primaryText else c.muted, size = 24.dp)
+                        if (item.badge > 0) {
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(end = 8.dp)
+                                    .heightIn(min = 18.dp)
+                                    .clip(AcShapes.pill)
+                                    .background(c.bad)
+                                    .padding(horizontal = 5.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(PersianFormat.number(item.badge.toLong()), style = AcTheme.type.caption, fontWeight = FontWeight.Bold, color = c.surface)
+                            }
+                        }
                     }
                     Text(
                         item.label,
