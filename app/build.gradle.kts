@@ -98,6 +98,7 @@ dependencies {
     implementation(libs.activity.compose)
     implementation(libs.lifecycle.runtime.compose)
     implementation(libs.lifecycle.viewmodel.compose)
+    implementation(libs.startup.runtime)
     debugImplementation(libs.compose.ui.tooling)
 
     testImplementation(libs.junit)
