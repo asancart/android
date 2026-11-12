@@ -7,6 +7,7 @@ import android.content.pm.PackageManager
 import android.view.View
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import io.github.asancart.android.ui.theme.ThemeChoice
@@ -47,6 +48,7 @@ class AppShellTest {
 
     @Test
     fun themeChoiceIsKept() {
+        (rule.activity.application as AsancartApp).container.crashReports.markAsked()
         rule.onNodeWithText(text(R.string.welcome_start)).performClick()
         rule.onNodeWithText(text(R.string.nav_settings)).performClick()
         rule.onNodeWithText(text(R.string.theme_dark)).performClick()
@@ -69,6 +71,23 @@ class AppShellTest {
         // And at runtime, after start-up, EmojiCompat was never configured.
         val emojiCompat = Class.forName("androidx.emoji2.text.EmojiCompat")
         assertFalse(emojiCompat.getMethod("isConfigured").invoke(null) as Boolean)
+    }
+
+    @Test
+    fun crashReportsAreAskedOnceAndOffUntilYes() {
+        val app = rule.activity.application as AsancartApp
+        rule.onNodeWithText(text(R.string.welcome_start)).performClick()
+        rule.onNodeWithText(text(R.string.crash_prompt_title)).assertIsDisplayed()
+        rule.onNodeWithText(text(R.string.crash_prompt_no)).performClick()
+        rule.onNodeWithText(text(R.string.crash_prompt_title)).assertDoesNotExist()
+        assertTrue(app.container.crashReports.asked)
+        assertTrue(app.container.crashReports.optedIn().isEmpty())
+
+        // Settings → Logs turns it on for the Profile (REQ-OPS-013).
+        rule.onNodeWithText(text(R.string.nav_settings)).performClick()
+        rule.onNodeWithText(text(R.string.settings_logs)).performClick()
+        rule.onNodeWithContentDescription(rule.activity.getString(R.string.logs_crash_switch, text(R.string.profile_default_name))).performClick()
+        assertEquals(setOf(DEFAULT_PROFILE_ID), app.container.crashReports.optedIn().keys)
     }
 
     @Test

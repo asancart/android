@@ -99,6 +99,8 @@ dependencies {
     implementation(libs.lifecycle.runtime.compose)
     implementation(libs.lifecycle.viewmodel.compose)
     implementation(libs.startup.runtime)
+    implementation(libs.androidx.core)
+    implementation(libs.acra.core)
     debugImplementation(libs.compose.ui.tooling)
 
     testImplementation(libs.junit)

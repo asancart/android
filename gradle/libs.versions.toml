@@ -13,6 +13,10 @@ startup = "1.2.0"
 # java.time and other JDK APIs on API 24-25 (core uses java.time).
 desugarJdkLibs = "2.1.5"
 junit = "4.13.2"
+# Crash reports without Google services (REQ-OPS-013).
+acra = "5.14.2"
+# FileProvider for the log export (REQ-OPS-012); also comes transitively.
+androidxCore = "1.19.1"
 robolectric = "4.17"
 
 [libraries]
@@ -36,6 +40,8 @@ startup-runtime = { module = "androidx.startup:startup-runtime", version.ref = "
 
 desugar-jdk-libs = { module = "com.android.tools:desugar_jdk_libs", version.ref = "desugarJdkLibs" }
 junit = { module = "junit:junit", version.ref = "junit" }
+acra-core = { module = "ch.acra:acra-core", version.ref = "acra" }
+androidx-core = { module = "androidx.core:core", version.ref = "androidxCore" }
 robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
 
 [plugins]

@@ -1,18 +1,24 @@
 package io.github.asancart.android.ui.settings
 
 import androidx.annotation.DrawableRes
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import io.github.asancart.android.R
 import io.github.asancart.android.ui.components.AcCard
+import io.github.asancart.android.ui.components.AcIcon
 import io.github.asancart.android.ui.components.BigTopBar
 import io.github.asancart.android.ui.components.Choice
 import io.github.asancart.android.ui.components.LeadIcon
@@ -31,7 +37,7 @@ import io.github.asancart.android.ui.theme.Tone
  * updates (T4.2) and Settings -> Logs (REQ-OPS-012, T4.6).
  */
 @Composable
-fun SettingsScreen(theme: ThemeChoice, onTheme: (ThemeChoice) -> Unit, versionName: String) {
+fun SettingsScreen(theme: ThemeChoice, onTheme: (ThemeChoice) -> Unit, versionName: String, onOpenLogs: () -> Unit = {}) {
     val c = AcTheme.colors
     Column(Modifier.fillMaxSize()) {
         BigTopBar(stringResource(R.string.settings_title))
@@ -52,6 +58,26 @@ fun SettingsScreen(theme: ThemeChoice, onTheme: (ThemeChoice) -> Unit, versionNa
             AcCard {
                 PrivacyRow(R.drawable.ic_send, Tone.OK, stringResource(R.string.privacy_sent_title), stringResource(R.string.privacy_sent_body))
                 PrivacyRow(R.drawable.ic_eyeoff, Tone.BAD, stringResource(R.string.privacy_never_title), stringResource(R.string.privacy_never_body))
+            }
+
+            // REQ-OPS-012, REQ-OPS-013.
+            ListGroup {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 56.dp)
+                        .clickable(role = Role.Button, onClick = onOpenLogs)
+                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    LeadIcon(R.drawable.ic_doc)
+                    Column(Modifier.weight(1f)) {
+                        Text(stringResource(R.string.settings_logs), style = AcTheme.type.bodyMedium)
+                        Text(stringResource(R.string.settings_logs_sub), style = AcTheme.type.small, color = c.muted)
+                    }
+                    AcIcon(R.drawable.ic_chev, tint = c.muted)
+                }
             }
 
             SectionTitle(stringResource(R.string.settings_section_about))
