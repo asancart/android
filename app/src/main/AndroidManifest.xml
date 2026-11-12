@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- No permissions yet: SMS permissions arrive with capture (T4.2); no INTERNET while BLK-001 holds. -->
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <application
         android:name=".AsancartApp"
@@ -22,6 +23,20 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- REQ-APP-041: emoji2's startup initializer asks the system downloadable-font provider
+             (androidx.content.action.LOAD_EMOJI_FONT) for an emoji font, and on most phones that
+             provider is Google Play Services. Removed, so EmojiCompat is never configured and text
+             uses the platform emoji. The lifecycle and profile installer initializers stay.
+             CI checks the merged debug and release manifests (scripts/check-manifest-no-gms.sh). -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.emoji2.text.EmojiCompatInitializer"
+                tools:node="remove" />
+        </provider>
     </application>
 
 </manifest>

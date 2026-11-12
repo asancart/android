@@ -1,6 +1,7 @@
 package org.asancart.android
 
 import android.Manifest
+import android.content.ComponentName
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.view.View
@@ -51,6 +52,23 @@ class AppShellTest {
         rule.onNodeWithText(text(R.string.theme_dark)).performClick()
 
         assertEquals(ThemeChoice.DARK, (rule.activity.application as AsancartApp).container.settings.theme.value)
+    }
+
+    @Test
+    fun noStartupInitializerReachesPlayServices() {
+        // REQ-APP-041: emoji2's initializer would ask the system font provider (Play Services on most phones).
+        val provider = rule.activity.packageManager.getProviderInfo(
+            ComponentName(rule.activity, "androidx.startup.InitializationProvider"),
+            PackageManager.GET_META_DATA,
+        )
+        val initializers = provider.metaData?.keySet().orEmpty()
+        // This is the real merged manifest: the other library initializers are still in it.
+        assertTrue(initializers.toString(), "androidx.lifecycle.ProcessLifecycleInitializer" in initializers)
+        assertFalse(initializers.toString(), "androidx.emoji2.text.EmojiCompatInitializer" in initializers)
+
+        // And at runtime, after start-up, EmojiCompat was never configured.
+        val emojiCompat = Class.forName("androidx.emoji2.text.EmojiCompat")
+        assertFalse(emojiCompat.getMethod("isConfigured").invoke(null) as Boolean)
     }
 
     @Test

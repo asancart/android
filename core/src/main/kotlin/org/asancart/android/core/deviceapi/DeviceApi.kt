@@ -52,7 +52,10 @@ object ErrorCode {
     const val PLAN_LIMIT = "PLAN_LIMIT"
 }
 
-data class PairRequest(val pairingCode: String, val deviceName: String, val appVersion: String)
+/** [pairingCode] is a single-use secret (F-04): never logged, so [toString] hides it. */
+data class PairRequest(val pairingCode: String, val deviceName: String, val appVersion: String) {
+    override fun toString(): String = "PairRequest(pairingCode=<redacted>, deviceName=$deviceName, appVersion=$appVersion)"
+}
 
 /**
  * [deviceCredential] is shown once and is a secret: never logged (REQ-OPS-003), so [toString]

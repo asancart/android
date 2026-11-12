@@ -1,5 +1,6 @@
 package org.asancart.android.core.sms
 
+import org.asancart.android.core.deviceapi.PairRequest
 import org.asancart.android.core.deviceapi.PairResponse
 import org.asancart.android.core.deviceapi.ShopRef
 import org.asancart.android.core.template.TemplateResult
@@ -26,6 +27,13 @@ class NoSecretsInToStringTest {
     fun `TemplateResult hides account digits`() {
         val text = TemplateResult(TemplateStatus.DEPOSIT, "mellat-account", 2_250_000, account = "8065955489").toString()
         assertFalse(text.contains("8065955489"), text)
+    }
+
+    @Test
+    fun `PairRequest hides the pairing code`() {
+        val text = PairRequest(pairingCode = "K7QM-2XPA", deviceName = "Galaxy A54", appVersion = "0.1.0").toString()
+        assertFalse(text.contains("K7QM-2XPA", ignoreCase = true), text)
+        assertTrue(text.contains("Galaxy A54"), text)
     }
 
     @Test

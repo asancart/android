@@ -30,7 +30,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v6
 
       - name: Lint, unit tests, debug APK
-        run: ./gradlew --continue --stacktrace :core:test :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
+        run: ./gradlew --continue --stacktrace :core:test :app:testDebugUnitTest :app:lintDebug :app:assembleDebug :app:processReleaseManifest
 
       # The debug APK is signed with the runner's generated debug key. Release signing is T4.5.
       - name: Verify APK signature
@@ -39,6 +39,19 @@ jobs:
           apksigner="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)/apksigner"
           "$apksigner" verify --verbose --print-certs "$apk"
           sha256sum "$apk"
+
+      # REQ-APP-041: no manifest entry may reach Play Services or Firebase (e.g. emoji2's font
+      # initializer). Checks the packaged debug manifest from the APK and the merged release manifest.
+      - name: Check manifests for Play Services
+        run: |
+          mkdir -p app/build/reports/manifests
+          aapt2="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)/aapt2"
+          "$aapt2" dump xmltree --file AndroidManifest.xml app/build/outputs/apk/debug/*.apk > app/build/reports/manifests/debug-apk.txt
+          release=$(find app/build/intermediates -path '*release*' -path '*merged_manifest*' -name AndroidManifest.xml | sort)
+          [ -n "$release" ] || { echo "no merged release manifest found"; exit 1; }
+          echo "release manifests:"; echo "$release"
+          i=0; for f in $release; do i=$((i+1)); cp "$f" "app/build/reports/manifests/release-$i.xml"; done
+          scripts/check-manifest-no-gms.sh app/build/reports/manifests/*
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v7
