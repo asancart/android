@@ -1,0 +1,16 @@
+Asancart for Android
+Copyright 2026 The Asancart authors. Licensed under the Apache License, Version 2.0 (LICENSE).
+
+This product bundles third-party material under its own licence:
+
+- Vazirmatn (https://github.com/rastikerdar/vazirmatn), SIL Open Font License 1.1.
+  Copyright 2015 The Vazirmatn Project Authors.
+- Lalezar (https://github.com/BornaIz/Lalezar), SIL Open Font License 1.1.
+  Copyright 2015 The Lalezar Project Authors.
+
+  app/src/main/res/font/*.ttf are the @asancart/tokens woff2 subsets (from @fontsource 5.3.0),
+  Arabic and Latin merged into one TTF per weight. Licence texts: app/src/main/assets/licenses/.
+
+- Asancart logo and app icons (app/src/main/res/mipmap-*, drawable/ic_launcher_*, drawable*/ic_stat_asancart*,
+  values/ic_launcher_background.xml, and the mark path data in ui/theme/Mark.kt), copied unchanged from
+  asancart/brand (commit 2e0d250), CC BY-ND 4.0. Not covered by the Apache licence; trademark rights are not granted.

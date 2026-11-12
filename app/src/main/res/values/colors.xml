@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Window background before Compose draws: --ac-bg from asancart/frontend packages/tokens/tokens.json. -->
+<resources>
+    <color name="ac_window_bg">#FAF7F5</color>
+</resources>
