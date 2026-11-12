@@ -49,8 +49,6 @@ android {
     lint {
         abortOnError = true
         checkDependencies = true
-        htmlReport = true
-        xmlReport = false
     }
 
     packaging {
