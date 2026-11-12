@@ -1,2 +1,20 @@
 design/dist/
 .DS_Store
+
+# Gradle and Android
+.gradle/
+.kotlin/
+build/
+local.properties
+captures/
+*.apk
+*.aab
+*.keystore
+*.jks
+
+# IDE
+.idea/
+*.iml
+
+# Local agent definitions (copied in per checkout, never published)
+.claude/

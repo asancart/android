@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- UI copy. The app is Persian only, so the default resources are Persian (fa). -->
+<resources xmlns:tools="http://schemas.android.com/tools" tools:locale="fa">
+    <string name="app_name">آسان‌کارت</string>
+    <string name="profile_default_name">پروفایل اصلی</string>
+
+    <string name="welcome_title">آسان‌کارت</string>
+    <string name="welcome_tagline">شنونده پیامک بانک برای فروشگاه شما</string>
+    <string name="welcome_privacy_title">فقط مبلغ و زمان واریز ارسال می‌شود</string>
+    <string name="welcome_privacy_body">مانده حساب و متن پیامک هرگز از این گوشی خارج نمی‌شود.</string>
+    <string name="welcome_open_title">متن‌باز و شفاف</string>
+    <string name="welcome_open_body">کد برنامه عمومی است و هر کسی می‌تواند آن را بررسی کند.</string>
+    <string name="welcome_targets_title">به هر سرویس سازگار وصل می‌شود</string>
+    <string name="welcome_targets_body">آسان‌کارت پیش‌فرض است. سرویس خودتان را هم می‌توانید اضافه کنید.</string>
+    <string name="welcome_start">شروع</string>
+    <string name="welcome_version">نسخه %1$s · %2$s</string>
+
+    <string name="nav_home">خانه</string>
+    <string name="nav_activity">فعالیت</string>
+    <string name="nav_templates">قالب‌ها</string>
+    <string name="nav_settings">تنظیمات</string>
+
+    <string name="home_all_ok">همه پروفایل‌های روشن کار می‌کنند</string>
+    <string name="home_section_profiles">پروفایل‌ها</string>
+    <string name="profile_not_connected">وصل نشده</string>
+    <string name="profile_stat_queue">در صف</string>
+    <string name="profile_stat_last_sms">از آخرین پیامک</string>
+    <string name="profile_stat_last_signal">از آخرین سیگنال</string>
+    <string name="profile_off">خاموش</string>
+    <string name="profile_setup_unfinished">راه‌اندازی ناتمام</string>
+    <string name="profile_switch_label">روشن و خاموش کردن «%1$s»</string>
+
+    <string name="activity_title">فعالیت</string>
+    <string name="activity_tab_sent">ارسال‌شده</string>
+    <string name="activity_tab_queue">در صف</string>
+    <string name="activity_tab_unparsed">شناخته‌نشده</string>
+    <string name="activity_sent_empty">هنوز واریزی ارسال نشده است.</string>
+    <string name="activity_queue_empty">صف خالی است.</string>
+    <string name="activity_unparsed_intro">این پیامک‌ها از فرستنده یکی از کارت‌ها آمده‌اند ولی هیچ قالبی آن‌ها را نخواند. فقط روی همین گوشی‌اند.</string>
+    <string name="activity_unparsed_empty">همه پیامک‌ها خوانده شدند.</string>
+
+    <string name="templates_title">قالب‌ها</string>
+    <string name="templates_official_none_title">هنوز قالب رسمی دریافت نشده</string>
+    <string name="templates_official_none_body">بعد از اتصال پروفایل، قالب‌های رسمی خودکار از همان سرویس دریافت می‌شوند.</string>
+    <string name="templates_section_custom">سفارشی · فقط روی این گوشی</string>
+    <string name="templates_custom_none">قالب سفارشی فقط روی همین گوشی است و همان شکل قالب‌های رسمی را دارد. هنوز قالبی نساخته‌اید.</string>
+
+    <string name="settings_title">تنظیمات</string>
+    <string name="settings_section_appearance">ظاهر</string>
+    <string name="theme_light">روشن</string>
+    <string name="theme_dark">تیره</string>
+    <string name="theme_system">سیستم</string>
+    <string name="settings_section_privacy">حریم خصوصی</string>
+    <string name="privacy_sent_title">ارسال می‌شود</string>
+    <string name="privacy_sent_body">مبلغ واریز، زمان دریافت پیامک، کارت، و کد پیگیری اگر بانک لازم بداند.</string>
+    <string name="privacy_never_title">هرگز ارسال نمی‌شود</string>
+    <string name="privacy_never_body">مانده حساب، شماره حساب، متن پیامک و پیامک‌های دیگر.</string>
+    <string name="settings_section_about">درباره</string>
+    <string name="about_version">نسخه</string>
+    <string name="about_source">کد منبع</string>
+    <string name="about_license">مجوز</string>
+
+    <string name="license_name" translatable="false">Apache-2.0</string>
+    <string name="source_url" translatable="false">github.com/asancart/android</string>
+</resources>
