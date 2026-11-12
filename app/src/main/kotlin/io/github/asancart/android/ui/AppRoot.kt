@@ -104,8 +104,9 @@ fun MainShell(initialTab: Tab = Tab.HOME) {
 private fun CrashReportsQuestion() {
     val container = LocalAppContainer.current
     var show by remember { mutableStateOf(!container.crashReports.asked) }
+    val profiles by container.profiles.profiles.collectAsStateWithLifecycle()
     if (!show) return
-    val platform = container.profiles.profiles.value.firstOrNull { it.target.kind == ApiTarget.Kind.PLATFORM }
+    val platform = profiles.firstOrNull { it.target.kind == ApiTarget.Kind.PLATFORM }
     if (platform == null) return
     fun answer(yes: Boolean) {
         container.crashReports.setOptIn(platform.id, platform.target.baseUrl, yes)

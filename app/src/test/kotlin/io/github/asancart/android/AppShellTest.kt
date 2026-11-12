@@ -10,6 +10,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import io.github.asancart.android.ui.theme.ThemeChoice
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -85,7 +86,7 @@ class AppShellTest {
 
         // Settings → Logs turns it on for the Profile (REQ-OPS-013).
         rule.onNodeWithText(text(R.string.nav_settings)).performClick()
-        rule.onNodeWithText(text(R.string.settings_logs)).performClick()
+        rule.onNodeWithText(text(R.string.settings_logs)).performScrollTo().performClick()
         rule.onNodeWithContentDescription(rule.activity.getString(R.string.logs_crash_switch, text(R.string.profile_default_name))).performClick()
         assertEquals(setOf(DEFAULT_PROFILE_ID), app.container.crashReports.optedIn().keys)
     }

@@ -1,5 +1,6 @@
 package io.github.asancart.android.log
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Build
@@ -23,6 +24,8 @@ import java.time.OffsetDateTime
  * custom targets; the Asancart Profile is asked once (my call in the docs). Kept in its own
  * preferences file, because ACRA sends from its own process.
  */
+// commit(), not apply(): ACRA reads these from its own process right after a crash.
+@SuppressLint("ApplySharedPref")
 class CrashReportPrefs(private val prefs: SharedPreferences) {
     /** Opted-in Profile id → its target base URL. */
     fun optedIn(): Map<String, String> = prefs.all.filterKeys { it.startsWith(PREFIX) }

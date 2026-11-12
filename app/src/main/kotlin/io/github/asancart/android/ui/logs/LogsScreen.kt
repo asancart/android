@@ -54,6 +54,7 @@ fun LogsRoute(onBack: () -> Unit) {
     val profiles by container.profiles.profiles.collectAsStateWithLifecycle()
     var optedIn by remember { mutableStateOf(container.crashReports.optedIn().keys) }
     val lines = remember { LogExport.tail(container.fileLog, 60) }
+    val shareTitle = stringResource(R.string.logs_share_title)
     LogsScreen(
         profiles = profiles,
         optedIn = optedIn,
@@ -71,7 +72,7 @@ fun LogsRoute(onBack: () -> Unit) {
                 .setType("text/plain")
                 .putExtra(Intent.EXTRA_STREAM, uri)
                 .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            context.startActivity(Intent.createChooser(send, context.getString(R.string.logs_share_title)))
+            context.startActivity(Intent.createChooser(send, shareTitle))
             container.log.info("log_export_shared", "bytes" to file.length())
         },
     )

@@ -3,6 +3,7 @@ package io.github.asancart.android
 import android.graphics.Bitmap
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.test.captureToImage
@@ -62,7 +63,7 @@ class ScreenshotTest {
 
     @Composable
     private fun SampleLogs() = LogsScreen(
-        profiles = container.profiles.profiles.value,
+        profiles = container.profiles.profiles.collectAsState().value,
         optedIn = setOf(DEFAULT_PROFILE_ID),
         lines = listOf(
             "{\"time\":\"2026-11-12T10:00:00Z\",\"level\":\"INFO\",\"app\":\"android\",\"env\":\"debug\",\"msg\":\"profile_ready\",\"profile_id\":\"default\"}",
