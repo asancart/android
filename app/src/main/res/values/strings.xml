@@ -42,7 +42,6 @@
     <string name="templates_title">قالب‌ها</string>
     <string name="templates_official_none_title">هنوز قالب رسمی دریافت نشده</string>
     <string name="templates_official_none_body">بعد از اتصال پروفایل، قالب‌های رسمی خودکار از همان سرویس دریافت می‌شوند.</string>
-    <string name="templates_section_official">رسمی</string>
     <string name="templates_section_custom">سفارشی · فقط روی این گوشی</string>
     <string name="templates_custom_none">قالب سفارشی فقط روی همین گوشی است و همان شکل قالب‌های رسمی را دارد. هنوز قالبی نساخته‌اید.</string>
 

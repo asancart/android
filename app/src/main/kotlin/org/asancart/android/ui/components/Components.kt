@@ -99,8 +99,8 @@ fun AcPill(text: String, tone: Tone = Tone.NEUTRAL, dot: Boolean = true) {
 @Composable
 fun AcBanner(@DrawableRes icon: Int, title: String, modifier: Modifier = Modifier, tone: Tone = Tone.WARN, body: String? = null) {
     val c = AcTheme.colors
-    val toneColor = c.toneColor(tone)
-    val (fill, border) = when (tone) {
+    val fg = c.toneColor(tone)
+    val (fillPart, borderAlpha) = when (tone) {
         Tone.OK -> 0.10f to 0.28f
         Tone.BAD -> 0.09f to 0.28f
         Tone.INFO -> 0.10f to 0.25f
@@ -110,8 +110,8 @@ fun AcBanner(@DrawableRes icon: Int, title: String, modifier: Modifier = Modifie
         modifier = modifier
             .fillMaxWidth()
             .clip(AcShapes.md)
-            .background(mix(c.surface, toneColor, fill))
-            .border(1.dp, toneColor.copy(alpha = border), AcShapes.md)
+            .background(mix(c.surface, fg, fillPart))
+            .border(1.dp, fg.copy(alpha = borderAlpha), AcShapes.md)
             .padding(horizontal = 14.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {

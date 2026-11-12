@@ -58,6 +58,15 @@ android {
     }
 }
 
+// Robolectric on SDK 36 reaches FileDescriptor internals through jdk.internal.access (JDK 17+).
+tasks.withType<Test>().configureEach {
+    jvmArgs(
+        "--add-exports=java.base/jdk.internal.access=ALL-UNNAMED",
+        "--add-opens=java.base/jdk.internal.access=ALL-UNNAMED",
+        "--add-opens=java.base/java.io=ALL-UNNAMED",
+    )
+}
+
 // REQ-APP-041: no Google Play Services or Firebase anywhere in the app. Fails any resolution that
 // would pull one in, directly or transitively.
 configurations.configureEach {
