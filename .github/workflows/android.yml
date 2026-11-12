@@ -30,7 +30,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v6
 
       - name: Lint, unit tests, debug APK
-        run: ./gradlew --continue --stacktrace :core:test :app:testDebugUnitTest :app:lintDebug :app:assembleDebug :app:processReleaseManifest
+        run: ./gradlew --continue --stacktrace :core:test :app:testDebugUnitTest :app:lintDebug :app:assembleDebug :app:assembleRelease
 
       # The debug APK is signed with the runner's generated debug key. Release signing is T4.5.
       - name: Verify APK signature
@@ -40,24 +40,44 @@ jobs:
           "$apksigner" verify --verbose --print-certs "$apk"
           sha256sum "$apk"
 
+      # REQ-APP-042 (DEC-035): the application ID is fixed from the first published APK.
+      - name: Check app identity
+        run: |
+          aapt2="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)/aapt2"
+          check() {
+            badging=$("$aapt2" dump badging "$1")
+            pkg=$(echo "$badging" | sed -n -E "s/^package: name='([^']*)'.*/\1/p")
+            # build-tools 36 prints minSdkVersion:'24'; older ones sdkVersion:'24'.
+            min=$(echo "$badging" | sed -n -E "s/^(minSdkVersion|sdkVersion):'([0-9]+)'.*/\2/p" | head -1)
+            echo "$1: package=$pkg minSdk=$min"
+            [ "$pkg" = "$2" ] && [ "$min" = "24" ] || { echo "expected package $2 and minSdk 24"; return 1; }
+          }
+          check app/build/outputs/apk/debug/app-debug.apk io.github.asancart.android.debug
+          check app/build/outputs/apk/release/app-release-unsigned.apk io.github.asancart.android
+
       # REQ-APP-041: no manifest entry may reach Play Services or Firebase (e.g. emoji2's font
-      # initializer). Checks the packaged debug manifest from the APK and the merged release manifest.
+      # initializer). Checks the packaged debug and release manifests from the APKs.
       - name: Check manifests for Play Services
         run: |
           mkdir -p app/build/reports/manifests
           aapt2="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)/aapt2"
-          "$aapt2" dump xmltree --file AndroidManifest.xml app/build/outputs/apk/debug/*.apk > app/build/reports/manifests/debug-apk.txt
-          release=$(find app/build/intermediates -path '*release*' -path '*merged_manifest*' -name AndroidManifest.xml | sort)
-          [ -n "$release" ] || { echo "no merged release manifest found"; exit 1; }
-          echo "release manifests:"; echo "$release"
-          i=0; for f in $release; do i=$((i+1)); cp "$f" "app/build/reports/manifests/release-$i.xml"; done
-          scripts/check-manifest-no-gms.sh app/build/reports/manifests/*
+          "$aapt2" dump xmltree --file AndroidManifest.xml app/build/outputs/apk/debug/app-debug.apk > app/build/reports/manifests/debug-apk.txt
+          "$aapt2" dump xmltree --file AndroidManifest.xml app/build/outputs/apk/release/app-release-unsigned.apk > app/build/reports/manifests/release-apk.txt
+          scripts/check-manifest-no-gms.sh app/build/reports/manifests/debug-apk.txt app/build/reports/manifests/release-apk.txt
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v7
         with:
           name: asancart-debug-apk
           path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+
+      # Unsigned (release signing is T4.5), so not installable; uploaded for identity and manifest checks.
+      - name: Upload release APK (unsigned)
+        uses: actions/upload-artifact@v7
+        with:
+          name: asancart-release-unsigned-apk
+          path: app/build/outputs/apk/release/*.apk
           if-no-files-found: error
 
       - name: Upload screenshots

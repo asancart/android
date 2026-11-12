@@ -10,11 +10,11 @@ val productionPlatformApiUrl = "https://api.asancart.org"
 val localPlatformApiUrl = providers.gradleProperty("asancart.platformApiUrl").getOrElse("http://10.0.2.2:8080")
 
 android {
-    namespace = "org.asancart.android"
+    namespace = "io.github.asancart.android"
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "org.asancart.android"
+        applicationId = "io.github.asancart.android"
         minSdk = 24
         targetSdk = 36
         versionCode = 1
