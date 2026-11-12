@@ -12,6 +12,8 @@ Needs JDK 21 (17 or newer works), the Android SDK with platform 37, and access t
 ./gradlew :core:test :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
 ```
 
+The Platform address is a build setting, not code: release builds use `https://api.asancart.org`, debug builds a local backend, by default `http://10.0.2.2:8080` (the dev machine as seen from the Android emulator). Change it with `-Pasancart.platformApiUrl=<url>` or in `~/.gradle/gradle.properties`.
+
 The debug APK lands in `app/build/outputs/apk/debug/`. Screen captures from the unit tests land in `app/build/outputs/screenshots/`. CI ([`.github/workflows/android.yml`](.github/workflows/android.yml)) runs the same tasks on every pull request and uploads the signed debug APK and the screenshots as artifacts.
 
 ## Layout

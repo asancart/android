@@ -11,8 +11,8 @@ interface ProfileRepository {
     val profiles: StateFlow<List<Profile>>
 
     /**
-     * REQ-APP-021: the app never opens empty. Creates the default Profile (the Platform, preselected
-     * per REQ-APP-022) when there is none, and returns the first Profile.
+     * REQ-APP-021: the app never opens empty. Creates the default Profile (the Platform target,
+     * preselected per REQ-APP-022) when there is none, and returns the first Profile.
      */
     fun ensureDefaultProfile(name: String): Profile
 
@@ -22,6 +22,8 @@ interface ProfileRepository {
 
 /** Keeps Profiles in memory. Replaced by on-disk storage with pairing in T4.3. */
 class InMemoryProfileRepository(
+    /** The Platform target of this build (see [ApiTarget.platform]). */
+    private val platform: ApiTarget,
     private val newId: () -> String = { UUID.randomUUID().toString() },
 ) : ProfileRepository {
     private val state = MutableStateFlow<List<Profile>>(emptyList())
@@ -30,7 +32,7 @@ class InMemoryProfileRepository(
 
     override fun ensureDefaultProfile(name: String): Profile {
         state.update { current ->
-            current.ifEmpty { listOf(Profile(id = newId(), name = name, target = ApiTarget.PLATFORM)) }
+            current.ifEmpty { listOf(Profile(id = newId(), name = name, target = platform)) }
         }
         return state.value.first()
     }

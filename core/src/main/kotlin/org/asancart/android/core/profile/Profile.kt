@@ -25,19 +25,26 @@ data class Profile(
     val enabled: Boolean = false,
 )
 
-/** An API target (REQ-APP-001): the Platform with its built-in address, or another service (REQ-APP-022). */
+/**
+ * An API target (REQ-APP-001): the Platform, or another service with a base URL typed by the user
+ * (REQ-APP-022). The Device API lives under `/v1/device` of [baseUrl].
+ */
 data class ApiTarget(val kind: Kind, val baseUrl: String) {
     enum class Kind { PLATFORM, CUSTOM }
 
-    /** Host shown in the UI, e.g. `api.asancart.org`. */
+    /** Host shown in the UI, with the port when there is one: `api.asancart.org`, `10.0.2.2:8080`. */
     val host: String
-        get() = runCatching { URI(baseUrl).host }.getOrNull() ?: baseUrl
+        get() = runCatching {
+            val uri = URI(baseUrl)
+            uri.host?.let { if (uri.port == -1) it else "$it:${uri.port}" }
+        }.getOrNull() ?: baseUrl
 
     companion object {
-        /** DEC-029: the app's built-in Platform address. The Device API lives under `/v1/device`. */
-        const val PLATFORM_BASE_URL = "https://api.asancart.org"
-
-        val PLATFORM = ApiTarget(Kind.PLATFORM, PLATFORM_BASE_URL)
+        /**
+         * The Platform target. Its address comes from the app build, not from here: release builds
+         * use the production `https://api.asancart.org` (DEC-029), debug builds a local backend.
+         */
+        fun platform(baseUrl: String) = ApiTarget(Kind.PLATFORM, baseUrl)
     }
 }
 

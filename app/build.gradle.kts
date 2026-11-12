@@ -3,6 +3,12 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+// Platform API base URL (REQ-APP-022). Release builds use the documented production value
+// (DEC-029). Debug builds use a local backend; the default is the dev machine as seen from the
+// Android emulator. Override with -Pasancart.platformApiUrl=... or in ~/.gradle/gradle.properties.
+val productionPlatformApiUrl = "https://api.asancart.org"
+val localPlatformApiUrl = providers.gradleProperty("asancart.platformApiUrl").getOrElse("http://10.0.2.2:8080")
+
 android {
     namespace = "org.asancart.android"
     compileSdk = 37
@@ -19,11 +25,13 @@ android {
         debug {
             // Debug builds install next to a release build and are signed with the debug key.
             applicationIdSuffix = ".debug"
+            buildConfigField("String", "PLATFORM_API_BASE_URL", "\"$localPlatformApiUrl\"")
         }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            buildConfigField("String", "PLATFORM_API_BASE_URL", "\"$productionPlatformApiUrl\"")
             // Release signing is T4.5; keys stay offline (REQ-OPS-033), never in this repo.
         }
     }

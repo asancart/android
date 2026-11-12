@@ -5,6 +5,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
+import org.asancart.android.core.profile.ApiTarget
 import org.asancart.android.core.profile.InMemoryProfileRepository
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -15,7 +16,7 @@ import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomeViewModelTest {
-    private val repo = InMemoryProfileRepository(newId = { "p1" }).apply { ensureDefaultProfile("پروفایل اصلی") }
+    private val repo = InMemoryProfileRepository(ApiTarget.platform("http://10.0.2.2:8080"), newId = { "p1" }).apply { ensureDefaultProfile("پروفایل اصلی") }
 
     @Before
     fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
@@ -28,7 +29,7 @@ class HomeViewModelTest {
         val card = HomeViewModel(repo) { false }.state.value.profiles.single()
         assertEquals("پروفایل اصلی", card.name)
         assertTrue(card.isPlatform)
-        assertEquals("api.asancart.org", card.host)
+        assertEquals("10.0.2.2:8080", card.host)
         assertEquals(null, card.shopName)
         assertFalse(card.enabled)
         assertFalse(card.canTurnOn)

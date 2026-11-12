@@ -5,6 +5,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import org.asancart.android.capture.SmsPermissions
 import org.asancart.android.core.deviceapi.DeviceApi
 import org.asancart.android.core.deviceapi.StubDeviceApi
+import org.asancart.android.core.profile.ApiTarget
 import org.asancart.android.core.profile.InMemoryProfileRepository
 import org.asancart.android.core.profile.ProfileRepository
 import org.asancart.android.log.AppLog
@@ -16,7 +17,8 @@ class AppContainer(context: Context) {
 
     val settings = SettingsStore(app.getSharedPreferences("settings", Context.MODE_PRIVATE))
 
-    val profiles: ProfileRepository = InMemoryProfileRepository()
+    /** The Platform address is a build setting (app/build.gradle.kts), never written in code. */
+    val profiles: ProfileRepository = InMemoryProfileRepository(ApiTarget.platform(BuildConfig.PLATFORM_API_BASE_URL))
 
     val smsPermissions = SmsPermissions(app)
 
