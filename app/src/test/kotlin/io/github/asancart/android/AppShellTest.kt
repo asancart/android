@@ -7,8 +7,10 @@ import android.content.pm.PackageManager
 import android.view.View
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import io.github.asancart.android.ui.theme.ThemeChoice
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -47,6 +49,7 @@ class AppShellTest {
 
     @Test
     fun themeChoiceIsKept() {
+        (rule.activity.application as AsancartApp).container.crashReports.markAsked()
         rule.onNodeWithText(text(R.string.welcome_start)).performClick()
         rule.onNodeWithText(text(R.string.nav_settings)).performClick()
         rule.onNodeWithText(text(R.string.theme_dark)).performClick()
@@ -72,12 +75,34 @@ class AppShellTest {
     }
 
     @Test
-    fun manifestAsksForNoNetworkOrSmsPermissionYet() {
-        val info = rule.activity.packageManager.getPackageInfo(rule.activity.packageName, PackageManager.GET_PERMISSIONS)
+    fun crashReportsAreAskedOnceAndOffUntilYes() {
+        val app = rule.activity.application as AsancartApp
+        rule.onNodeWithText(text(R.string.welcome_start)).performClick()
+        rule.onNodeWithText(text(R.string.crash_prompt_title)).assertIsDisplayed()
+        rule.onNodeWithText(text(R.string.crash_prompt_no)).performClick()
+        rule.onNodeWithText(text(R.string.crash_prompt_title)).assertDoesNotExist()
+        assertTrue(app.container.crashReports.asked)
+        assertTrue(app.container.crashReports.optedIn().isEmpty())
+
+        // Settings → Logs turns it on for the Profile (REQ-OPS-013).
+        rule.onNodeWithText(text(R.string.nav_settings)).performClick()
+        rule.onNodeWithText(text(R.string.settings_logs)).performScrollTo().performClick()
+        rule.onNodeWithContentDescription(rule.activity.getString(R.string.logs_crash_switch, text(R.string.profile_default_name))).performClick()
+        assertEquals(setOf(DEFAULT_PROFILE_ID), app.container.crashReports.optedIn().keys)
+    }
+
+    @Test
+    fun manifestAsksForSmsButNotForNetworkYet() {
+        val pm = rule.activity.packageManager
+        val info = pm.getPackageInfo(rule.activity.packageName, PackageManager.GET_PERMISSIONS or PackageManager.GET_RECEIVERS)
         val requested = info.requestedPermissions.orEmpty().toSet()
-        // BLK-001: no networking. SMS permissions come with capture (T4.2).
-        for (p in listOf(Manifest.permission.INTERNET, Manifest.permission.RECEIVE_SMS, Manifest.permission.READ_SMS)) {
-            assertFalse("$p must not be requested yet", p in requested)
-        }
+        // REQ-APP-010, REQ-APP-011: capture. Sending (INTERNET) comes with T4.3/T4.4.
+        assertTrue(Manifest.permission.RECEIVE_SMS in requested)
+        assertTrue(Manifest.permission.READ_SMS in requested)
+        assertFalse(Manifest.permission.INTERNET in requested)
+        // Only the system can deliver SMS_RECEIVED to the receiver.
+        val receiver = info.receivers.orEmpty().single { it.name.endsWith(".capture.SmsReceiver") }
+        assertEquals(Manifest.permission.BROADCAST_SMS, receiver.permission)
+        assertTrue(receiver.exported)
     }
 }

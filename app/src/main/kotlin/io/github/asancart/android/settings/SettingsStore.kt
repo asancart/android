@@ -21,6 +21,19 @@ class SettingsStore(private val prefs: SharedPreferences) {
         themeState.value = choice
     }
 
+    /**
+     * REQ-APP-026: an SMS permission request ended denied without a dialog (a restricted setting,
+     * or denied for good). The Permissions screen then sends the user to the app's system page.
+     */
+    var smsPermissionLocked: Boolean
+        get() = prefs.getBoolean(KEY_SMS_LOCKED, false)
+        set(value) = prefs.edit().putBoolean(KEY_SMS_LOCKED, value).apply()
+
+    /** Vendor autostart can't be read; the user confirms it (REQ-APP-026). */
+    var autostartConfirmed: Boolean
+        get() = prefs.getBoolean(KEY_AUTOSTART, false)
+        set(value) = prefs.edit().putBoolean(KEY_AUTOSTART, value).apply()
+
     fun completeFirstRun() {
         prefs.edit().putBoolean(KEY_FIRST_RUN_DONE, true).apply()
         firstRunState.value = true
@@ -32,5 +45,7 @@ class SettingsStore(private val prefs: SharedPreferences) {
     private companion object {
         const val KEY_THEME = "theme"
         const val KEY_FIRST_RUN_DONE = "first_run_done"
+        const val KEY_SMS_LOCKED = "sms_permission_locked"
+        const val KEY_AUTOSTART = "autostart_confirmed"
     }
 }

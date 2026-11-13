@@ -3,9 +3,9 @@ package io.github.asancart.android.log
 import android.util.Log
 
 /**
- * Logging seam (REQ-OPS-010..013). T4.6 adds the rolling file log (5 files x 1 MB), log export and
- * ACRA crash reports. Events are a name plus plain fields, so callers pass ids and counts, never
- * objects: no SMS text, amounts with account digits, balances or credentials (REQ-OPS-011).
+ * App log (REQ-OPS-010..013). Events are a name plus plain fields, so callers pass ids, template
+ * names, reasons and counts, never objects: no SMS text, amounts with account digits, balances or
+ * credentials (REQ-OPS-011). Every implementation runs [LogRedactor] on what it writes.
  */
 interface AppLog {
     fun info(event: String, vararg fields: Pair<String, Any?>)
@@ -15,8 +15,28 @@ interface AppLog {
     fun error(event: String, error: Throwable? = null, vararg fields: Pair<String, Any?>)
 
     companion object {
-        /** Debug builds log to logcat; release builds log nothing until T4.6. */
+        /** Logcat in debug builds, nothing otherwise (tests). */
         fun forBuild(debug: Boolean): AppLog = if (debug) LogcatLog else NoLog
+
+        /** The app's log: the rolling files (REQ-OPS-010), plus logcat in debug builds. */
+        fun app(file: FileLog, debug: Boolean): AppLog = if (debug) Both(file, LogcatLog) else file
+    }
+}
+
+private class Both(private val a: AppLog, private val b: AppLog) : AppLog {
+    override fun info(event: String, vararg fields: Pair<String, Any?>) {
+        a.info(event, *fields)
+        b.info(event, *fields)
+    }
+
+    override fun warn(event: String, vararg fields: Pair<String, Any?>) {
+        a.warn(event, *fields)
+        b.warn(event, *fields)
+    }
+
+    override fun error(event: String, error: Throwable?, vararg fields: Pair<String, Any?>) {
+        a.error(event, error, *fields)
+        b.error(event, error, *fields)
     }
 }
 
@@ -40,9 +60,12 @@ private object LogcatLog : AppLog {
     }
 
     override fun error(event: String, error: Throwable?, vararg fields: Pair<String, Any?>) {
-        Log.e(TAG, line(event, fields), error)
+        val trace = error?.let { "\n" + LogRedactor.redact(it.stackTraceToString()) }.orEmpty()
+        Log.e(TAG, line(event, fields) + trace)
     }
 
     private fun line(event: String, fields: Array<out Pair<String, Any?>>): String =
-        fields.joinToString(separator = " ", prefix = event + if (fields.isEmpty()) "" else " ") { (k, v) -> "$k=$v" }
+        fields.joinToString(separator = " ", prefix = LogRedactor.redact(event) + if (fields.isEmpty()) "" else " ") { (k, v) ->
+            "$k=${LogRedactor.redactField(k, v)}"
+        }
 }

@@ -1,6 +1,11 @@
 package io.github.asancart.android.core.deviceapi
 
 import io.github.asancart.android.core.queue.TransferReport
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.int
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import java.time.Instant
 
 /**
@@ -67,8 +72,17 @@ class StubDeviceApi(
         return ApiResult.Ok(Unit)
     }
 
-    override suspend fun parserTemplates(since: Instant?): ApiResult<ParserTemplatesResponse> =
-        ApiResult.Ok(ParserTemplatesResponse(serverTime = clock(), items = emptyList()))
+    /**
+     * The official templates (asancart/documents `parser-templates`, bundled as
+     * `official-parser-templates.json`), all published once: without [since] every one, with
+     * [since] only those published at or after it (REQ-DEV-005).
+     */
+    override suspend fun parserTemplates(since: Instant?): ApiResult<ParserTemplatesResponse> {
+        val items = officialTemplates.filter { since == null || !it.publishedAt.isBefore(since) }
+        return ApiResult.Ok(ParserTemplatesResponse(serverTime = clock(), items = items))
+    }
+
+    private val officialTemplates: List<ParserTemplateItem> by lazy { loadOfficialTemplates() }
 
     override suspend fun crashReport(report: CrashReport): ApiResult<Unit> {
         if (!paired) return unauthorized()
@@ -82,6 +96,25 @@ class StubDeviceApi(
 
     companion object {
         const val SAMPLE_PAIRING_CODE = "K7QM-2XPA"
+
+        private fun loadOfficialTemplates(): List<ParserTemplateItem> {
+            val text = StubDeviceApi::class.java.getResourceAsStream("official-parser-templates.json")
+                ?.use { it.readBytes().toString(Charsets.UTF_8) }
+                ?: return emptyList()
+            return Json.parseToJsonElement(text).jsonObject["items"]!!.jsonArray.map { e ->
+                val o = e.jsonObject
+                ParserTemplateItem(
+                    id = o["id"]!!.jsonPrimitive.content,
+                    bankId = o["bank_id"]!!.jsonPrimitive.content,
+                    name = o["name"]!!.jsonPrimitive.content,
+                    version = o["version"]!!.jsonPrimitive.int,
+                    status = ParserTemplateItem.Status.PUBLISHED,
+                    publishedAt = Instant.parse(o["published_at"]!!.jsonPrimitive.content),
+                    retiredAt = null,
+                    body = o["body"].toString(),
+                )
+            }
+        }
 
         val SAMPLE_SHOP = ShopRef(id = "shop_sample", name = "کافه نارنج")
 

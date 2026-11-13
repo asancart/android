@@ -19,6 +19,16 @@ The Platform address is a build setting, not code: release builds use `https://a
 
 The debug APK lands in `app/build/outputs/apk/debug/`, the unsigned release APK in `app/build/outputs/apk/release/`. Screen captures from the unit tests land in `app/build/outputs/screenshots/`. CI ([`.github/workflows/android.yml`](.github/workflows/android.yml)) runs the same tasks on every pull request and uploads the signed debug APK and the screenshots as artifacts.
 
+## Parser Template fixtures
+
+The official Parser Templates and their fixtures (bank SMS samples) live in the private Asancart documents repository and are not published here. To run the fixture checks locally, copy them from a documents checkout:
+
+```sh
+scripts/sync-parser-templates.sh ../documents     # Node 22.6+ and Python 3
+```
+
+That fills the ignored `fixtures/` folder and the stub Device API's template list. `:core:test` then runs every fixture, cross-bank negative and reference pair on the JVM; `:app:connectedDebugAndroidTest` runs the same suite on a device. Without the copy those tests are skipped; the engine's own unit tests and the capture tests always run.
+
 ## Layout
 
 | Path | What |
@@ -37,13 +47,14 @@ Packages:
 | `core.queue`, `core.heartbeat` | Transfer Reports, the per-target outgoing queue, heartbeat setting |
 | `core.deviceapi` | Typed Device API (`/v1/device`) and an in-memory stub |
 | `capture` | SMS receiver and inbox re-scan (Android side) |
-| `log` | App log; never SMS text, balances or credentials |
+| `log` | Rolling file log (5 × 1 MB), the log filter, log export, ACRA crash reports; never SMS text, balances or credentials |
 | `ui` | Screens, components and the theme (`ui/theme`, colours copied from the Asancart tokens) |
 
 ## Rules
 
 - No Google Play Services or Firebase. The build fails if any dependency pulls one in.
-- SMS text, balances, account digits and credentials stay on the phone and out of logs.
+- SMS text, balances, account digits and credentials stay on the phone and out of logs: every log line, field and crash trace goes through `LogRedactor`.
+- Logs stay on the phone; Settings → Logs shares the newest 1 MB as one text file. Crash reports (ACRA) go only to Profiles whose user turned them on.
 - UI copy is Persian, in `res/values/strings.xml`; colours, fonts and radii come from the Asancart tokens only.
 
 ## Design
