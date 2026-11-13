@@ -19,6 +19,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -28,12 +29,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import io.github.asancart.android.R
 import io.github.asancart.android.ui.theme.AcShapes
 import io.github.asancart.android.ui.theme.AcTheme
 import io.github.asancart.android.ui.theme.Tone
@@ -201,6 +204,21 @@ fun BigTopBar(title: String, actions: @Composable RowScope.() -> Unit = {}) {
     ) {
         Text(title, style = AcTheme.type.screenTitle, modifier = Modifier.weight(1f))
         actions()
+    }
+}
+
+/** `.abar`: small app bar with a back arrow (it points right: the layout is RTL). */
+@Composable
+fun BackTopBar(title: String, onBack: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(start = 6.dp, end = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        IconButton(onClick = onBack) {
+            AcIcon(R.drawable.ic_back, size = 24.dp, description = stringResource(R.string.back))
+        }
+        Text(title, style = AcTheme.type.barTitle, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
     }
 }
 

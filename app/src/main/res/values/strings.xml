@@ -62,4 +62,21 @@
 
     <string name="license_name" translatable="false">Apache-2.0</string>
     <string name="source_url" translatable="false">github.com/asancart/android</string>
+
+    <string name="back">بازگشت</string>
+    <string name="settings_logs">گزارش‌ها</string>
+    <string name="settings_logs_sub">فایل گزارش برنامه و گزارش خرابی</string>
+    <string name="logs_title">گزارش‌ها</string>
+    <string name="logs_crash_section">گزارش خرابی</string>
+    <string name="logs_crash_about">اگر برنامه از کار بیفتد، گزارش فنی آن به سرویس همان پروفایل فرستاده می‌شود: نسخه برنامه، نسخه اندروید، مدل گوشی و متن خطا. متن پیامک، مبلغ، مانده و رمزها در آن نیست.</string>
+    <string name="logs_crash_switch">ارسال گزارش خرابی به «%1$s»</string>
+    <string name="logs_file_section">فایل گزارش</string>
+    <string name="logs_file_about">گزارش برنامه فقط روی همین گوشی است و خودکار جایی فرستاده نمی‌شود. برای پیوست درخواست پشتیبانی، آخرین بخش آن (تا ۱ مگابایت) را در یک فایل متنی بفرستید.</string>
+    <string name="logs_share">اشتراک فایل گزارش</string>
+    <string name="logs_empty">هنوز گزارشی ثبت نشده است.</string>
+    <string name="logs_share_title">فایل گزارش آسان‌کارت</string>
+    <string name="crash_prompt_title">گزارش خرابی</string>
+    <string name="crash_prompt_body">اگر برنامه از کار بیفتد، گزارش فنی آن برای آسان‌کارت فرستاده شود؟ متن پیامک، مبلغ، مانده و رمزها در آن نیست. بعداً در «تنظیمات»، بخش «گزارش‌ها» می‌توانید عوضش کنید.</string>
+    <string name="crash_prompt_yes">بفرست</string>
+    <string name="crash_prompt_no">نه</string>
 </resources>

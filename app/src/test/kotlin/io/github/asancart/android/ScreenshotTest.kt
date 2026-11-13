@@ -1,8 +1,13 @@
 package io.github.asancart.android
 
 import android.graphics.Bitmap
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.test.captureToImage
@@ -10,7 +15,9 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.unit.LayoutDirection
 import io.github.asancart.android.ui.MainShell
+import io.github.asancart.android.ui.logs.LogsScreen
 import io.github.asancart.android.ui.Tab
+import io.github.asancart.android.ui.theme.AcTheme
 import io.github.asancart.android.ui.theme.AsancartTheme
 import io.github.asancart.android.ui.welcome.WelcomeScreen
 import org.junit.Rule
@@ -55,8 +62,31 @@ class ScreenshotTest {
 
     @Test fun settingsDark() = shoot("settings-dark", dark = true) { MainShell(Tab.SETTINGS) }
 
+    @Test fun logsLight() = shoot("logs-light", dark = false) { SampleLogs() }
+
+    @Test fun logsDark() = shoot("logs-dark", dark = true) { SampleLogs() }
+
+    /** As in the app's overlay: the screen on the theme background. */
+    @Composable
+    private fun SampleLogs() = Box(Modifier.fillMaxSize().background(AcTheme.colors.bg)) { SampleLogsScreen() }
+
+    @Composable
+    private fun SampleLogsScreen() = LogsScreen(
+        profiles = container.profiles.profiles.collectAsState().value,
+        optedIn = setOf(DEFAULT_PROFILE_ID),
+        lines = listOf(
+            "{\"time\":\"2026-11-12T10:00:00Z\",\"level\":\"INFO\",\"app\":\"android\",\"env\":\"debug\",\"msg\":\"profile_ready\",\"profile_id\":\"default\"}",
+            "{\"time\":\"2026-11-12T10:00:05Z\",\"level\":\"WARN\",\"app\":\"android\",\"env\":\"debug\",\"msg\":\"templates_refresh_failed\",\"http\":\"503\"}",
+        ),
+        onBack = {},
+        onCrashReports = { _, _ -> },
+        onShare = {},
+    )
+
     private fun shoot(name: String, dark: Boolean, content: @Composable () -> Unit) {
         val app = container
+        // The one-time crash-report question is a dialog: answered here so the screen is alone.
+        app.crashReports.markAsked()
         rule.setContent {
             CompositionLocalProvider(LocalAppContainer provides app, LocalLayoutDirection provides LayoutDirection.Rtl) {
                 AsancartTheme(dark = dark, content = content)
