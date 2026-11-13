@@ -78,6 +78,29 @@ class LogRedactorTest {
     }
 
     @Test
+    fun shebaWrittenWithDashesOrSpacesIsMaskedLikeThePlainForm() {
+        // T4.12: the dashed form kept 12 of its 24 digits.
+        val digits = "820540102680020817909002"
+        for (written in listOf("IR82-0540-1026-8002-0817-9090-02", "ir82-0540-1026-8002-0817-9090-02", "IR-82-0540-1026-8002-0817-9090-02", "IR82 0540 1026 8002 0817 9090 02", "IR820540102680020817909002")) {
+            val r = LogRedactor.redact("refund to $written requested")
+            assertEquals(written, "refund to IR********************9002 requested", r)
+            for (group in listOf("0540", "1026", "8002", "0817", "9090")) leaks(group, r)
+            leaks(digits.dropLast(4), r.filter(Char::isDigit))
+        }
+    }
+
+    @Test
+    fun aJwtIsRemovedWhereverItStands() {
+        // T4.12: after "token <word>" only the word was removed.
+        val jwt = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkZXZpY2UtMSJ9.c2lnbmF0dXJlLXBhcnQtMDAx"
+        for (line in listOf("token refresh $jwt", "Token type=$jwt", "renewed $jwt ok", "Authorization: Bearer $jwt", "{\"session\":\"$jwt\"}")) {
+            val r = LogRedactor.redact(line)
+            for (part in jwt.split('.')) leaks(part, r)
+            assertTrue(r, r.contains(LogRedactor.REDACTED))
+        }
+    }
+
+    @Test
     fun idsTimesCountsAndNamesStay() {
         val line = "report_queued profile_id=3f2b8c1e-4d5a-4e6f-8a9b-0c1d2e3f4a5b template=mellat-account at=2026-11-12T10:00:00Z rows=12 http=503 code_name=VALIDATION_FAILED"
         assertEquals(line, LogRedactor.redact(line))
