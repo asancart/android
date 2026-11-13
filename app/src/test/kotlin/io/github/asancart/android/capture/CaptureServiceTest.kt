@@ -141,6 +141,32 @@ class CaptureServiceTest {
     }
 
     @Test
+    fun aFailureBetweenQueueAndSeenLeavesNeitherAndTheNextRescanQueuesOnce() {
+        // T4.15: the process dies after the report is queued but before the SMS is marked seen.
+        val store = CaptureStore(context, null)
+        val events = Events()
+        val s = service(store, log = events)
+        s.sync { start() }
+        inbox.rows += InboxSms(1, "700717", deposit, t0.plusSeconds(10).toEpochMilli())
+        store.writableDatabase.execSQL("CREATE TRIGGER crash_before_seen BEFORE INSERT ON seen BEGIN SELECT RAISE(ABORT, 'simulated crash'); END")
+        s.sync { rescan() }
+        assertEquals(listOf("capture_failed"), events.errors)
+        assertTrue(store.pendingCounts().isEmpty())
+        assertEquals(0, seenRows(store))
+
+        store.writableDatabase.execSQL("DROP TRIGGER crash_before_seen")
+        s.sync { rescan() }
+        s.sync { rescan() }
+        assertEquals(1, store.pending("p1").size)
+        assertEquals(1, seenRows(store))
+    }
+
+    private fun seenRows(store: CaptureStore) = store.readableDatabase.rawQuery("SELECT COUNT(*) FROM seen", null).use { c ->
+        c.moveToFirst()
+        c.getInt(0)
+    }
+
+    @Test
     fun aFailingJobIsLoggedAndRetriedNotFatal() {
         val store = CaptureStore(context, null)
         val events = Events()

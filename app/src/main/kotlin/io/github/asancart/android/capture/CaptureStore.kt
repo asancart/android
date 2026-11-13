@@ -37,6 +37,17 @@ class CaptureStore(context: Context, name: String? = "capture.db") : SQLiteOpenH
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) = Unit
 
+    /** Runs [block] in one SQLite transaction: its writes commit together, or none of them do. */
+    fun <T> inTransaction(block: () -> T): T {
+        val db = writableDatabase
+        db.beginTransaction()
+        try {
+            return block().also { db.setTransactionSuccessful() }
+        } finally {
+            db.endTransaction()
+        }
+    }
+
     // Unparsed list (REQ-APP-015)
 
     fun insertUnparsed(u: UnparsedSms) {
@@ -124,8 +135,9 @@ class CaptureStore(context: Context, name: String? = "capture.db") : SQLiteOpenH
             arrayOf(fingerprint, (at.toEpochMilli() - windowMillis).toString(), (at.toEpochMilli() + windowMillis).toString()),
         ).use { it.moveToFirst() }
 
+    /** Throws on failure, so a caller's [inTransaction] rolls back the writes made with it. */
     fun markSeen(fingerprint: String, at: Instant) {
-        writableDatabase.insert("seen", null, ContentValues().apply {
+        writableDatabase.insertOrThrow("seen", null, ContentValues().apply {
             put("fingerprint", fingerprint)
             put("received_at", at.toEpochMilli())
         })
