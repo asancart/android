@@ -47,8 +47,8 @@ object LogRedactor {
     )
     private val UUID = Regex("\\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\\b")
 
-    /** What people put between digit groups: space, NBSP, narrow NBSP, ZWNJ, dot, dash. */
-    private const val SEP = "[ \\u00A0\\u202F\\u200C.\\-]"
+    /** What people put between digit groups: space, tab, NBSP, narrow NBSP, ZWNJ, dot, slash, dash. */
+    private const val SEP = "[ \\t\\u00A0\\u202F\\u200C./\\-]"
 
     /**
      * IR and 24 digits (22 to 24 accepted, for typos), with any run of [SEP] between them. No word
@@ -56,23 +56,31 @@ object LogRedactor {
      */
     private val SHEBA = Regex("(?i)IR$SEP*(\\d{2}(?:$SEP*\\d){20,22})(?![\\d])")
 
-    /** A date (Gregorian or Jalali year) kept whole, so two dates side by side are not one number. */
-    private val DATE = Regex("(?<![\\d.\\-])(?:1[34]|19|20)\\d{2}-[01]\\d-[0-3]\\d(?![\\d.\\-])")
+    /**
+     * A date kept whole, so two dates side by side are not one number: `yyyy-mm-dd`, `yyyy/mm/dd`
+     * or `dd/mm/yyyy` (Gregorian or Jalali year, `-`, `/` or `.`), and the SMS form `yy/mm/dd`.
+     */
+    private val DATE = Regex(
+        "(?<![\\d./\\-])(?:(?:1[34]|19|20)\\d{2}([-/.])[01]\\d\\1[0-3]\\d|[0-3]\\d([-/.])[01]\\d\\2(?:1[34]|19|20)\\d{2}|\\d{2}/\\d{2}/\\d{2})(?![\\d./\\-])",
+    )
+
+    /** An IPv4 address (each part 0 to 255), kept whole. */
+    private const val OCTET = "(?:25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)"
+    private val IPV4 = Regex("(?<![\\d.])$OCTET(?:\\.$OCTET){3}(?![\\d]|\\.\\d)")
 
     /** Not next to another digit group: a card or phone shape inside a longer run is not one. */
-    private const val ALONE_BEFORE = "(?<![\\d])(?<!\\d$SEP)"
-    private const val ALONE_AFTER = "(?![\\d])(?!$SEP\\d)"
+    private const val ALONE_BEFORE = "(?<![\\d])(?<!\\d$SEP{1,8})"
+    private const val ALONE_AFTER = "(?![\\d])(?!$SEP+\\d)"
     private val CARD = Regex("$ALONE_BEFORE(\\d{4})[ -]?(\\d{4})[ -]?(\\d{4})[ -]?(\\d{4})$ALONE_AFTER")
 
     /** Iranian mobile numbers, also written with spaces or dashes: `0912 123 4567`, `+98 912-123-4567`. */
     private val PHONE = Regex("$ALONE_BEFORE(?:(?:\\+|00)98[ -]?|0)?9\\d{2}[ -]?\\d{3}[ -]?\\d{4}$ALONE_AFTER")
 
     /**
-     * Digit groups joined by up to 3 [SEP] characters (`0105-1234-5678-01`). A group followed by `:`
-     * starts a time and is left out. Runs of 10 or more digits become `<number>`.
+     * Digit groups joined by any run of [SEP] characters (`0105-1234-5678-01`, `0105 -  1234`). A
+     * group followed by `:` starts a time and is left out. Runs of 10 or more digits become `<number>`.
      */
-    private val GROUPED = Regex("(?<![\\d])\\d+(?:$SEP{1,3}\\d+)+(?![\\d:])")
-    private val IPV4 = Regex("\\d{1,3}(?:\\.\\d{1,3}){3}")
+    private val GROUPED = Regex("(?<![\\d])\\d+(?:$SEP+\\d+)+(?![\\d:])")
     private val LONG_NUMBER = Regex("(?<![\\d])\\d[\\d,\\u066C]{4,}\\d(?![\\d])")
 
     fun redact(text: String): String {
@@ -84,7 +92,7 @@ object LogRedactor {
         s = KEY_VALUE.replace(s) { m -> m.groupValues[1] + m.groupValues[2] + m.groupValues[3] + m.groupValues[4] + m.groupValues[5] + REDACTED }
         s = JSON_CODE.replace(s) { m -> m.groupValues[1] + REDACTED + m.groupValues[3] }
 
-        // Keep UUIDs (Profile and report ids) out of the number rules; dates once a Sheba is masked.
+        // Keep UUIDs (Profile and report ids) out of the number rules; dates and IPs once a Sheba is masked.
         val kept = mutableListOf<String>()
         fun keep(m: MatchResult): String {
             kept += m.value
@@ -94,9 +102,10 @@ object LogRedactor {
         // Numbers with a known shape first: a dashed card number also fits the pairing-code shape.
         s = SHEBA.replace(s) { m -> "IR" + "*".repeat(20) + m.groupValues[1].filter(Char::isDigit).takeLast(4) }
         s = DATE.replace(s, ::keep)
+        s = IPV4.replace(s, ::keep)
         s = CARD.replace(s) { m -> m.groupValues[1] + "********" + m.groupValues[4] }
         s = PHONE.replace(s) { m -> "*******" + m.value.filter(Char::isDigit).takeLast(4) }
-        s = GROUPED.replace(s) { m -> if (m.value.count(Char::isDigit) < 10 || IPV4.matches(m.value)) m.value else "<number>" }
+        s = GROUPED.replace(s) { m -> if (m.value.count(Char::isDigit) < 10) m.value else "<number>" }
         s = PAIRING_CODE.replace(s, REDACTED)
         s = DEVICE_CREDENTIAL.replace(s, REDACTED)
         s = OPAQUE_TOKEN.replace(s, REDACTED)

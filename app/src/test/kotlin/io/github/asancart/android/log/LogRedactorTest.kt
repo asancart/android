@@ -145,6 +145,27 @@ class LogRedactorTest {
     }
 
     @Test
+    fun groupsSplitByTabSlashOrLongerRunsLoseTheirDigits() {
+        // T4.16: QA's four strings from the T4.13 probe.
+        val masked = "IR********************9002"
+        assertEquals("to $masked ok", LogRedactor.redact("to IR82\t0540\t1026\t8002\t0817\t9090\t02 ok"))
+        assertEquals("to $masked ok", LogRedactor.redact("to IR82/0540/1026/8002/0817/9090/02 ok"))
+        assertEquals("account <number> blocked", LogRedactor.redact("account 0105/1234/5678/01 blocked"))
+        assertEquals("account <number> blocked", LogRedactor.redact("account 0105 -  1234 -  5678 -  01 blocked"))
+        // And the same account with a tab, and a card shape inside a run with a long separator.
+        assertEquals("account <number> blocked", LogRedactor.redact("account 0105\t1234\t5678\t01 blocked"))
+        leaks("0540", LogRedactor.redact("x 82 -  0540-1026-8002-0817 -  90"))
+    }
+
+    @Test
+    fun slashDatesTimesUuidsIpsAndRequestIdsStay() {
+        val line = "sms of 05/08/20-13:55, from 1405/08/22 to 1405/08/23, on 12/11/2026 and 2026/11/12 2026/11/13 at 10:05:00\t11:00, " +
+            "request_id=3f2a9c1e-0b7d-4e21-9a5c-6d8e0f1b2c3d, hosts 192.168.100.200 / 10.0.0.1, http://10.0.2.2:8080/v1/device/reports, " +
+            "version 0.1.0-debug, rows 12/340"
+        assertEquals(line, LogRedactor.redact(line))
+    }
+
+    @Test
     fun idsTimesCountsAndNamesStay() {
         val line = "report_queued profile_id=3f2b8c1e-4d5a-4e6f-8a9b-0c1d2e3f4a5b template=mellat-account at=2026-11-12T10:00:00Z rows=12 http=503 code_name=VALIDATION_FAILED"
         assertEquals(line, LogRedactor.redact(line))
