@@ -47,13 +47,14 @@ Packages:
 | `core.queue`, `core.heartbeat` | Transfer Reports, the per-target outgoing queue, heartbeat setting |
 | `core.deviceapi` | Typed Device API (`/v1/device`) and an in-memory stub |
 | `capture` | SMS receiver and inbox re-scan (Android side) |
-| `log` | App log; never SMS text, balances or credentials |
+| `log` | Rolling file log (5 × 1 MB), the log filter, log export, ACRA crash reports; never SMS text, balances or credentials |
 | `ui` | Screens, components and the theme (`ui/theme`, colours copied from the Asancart tokens) |
 
 ## Rules
 
 - No Google Play Services or Firebase. The build fails if any dependency pulls one in.
-- SMS text, balances, account digits and credentials stay on the phone and out of logs.
+- SMS text, balances, account digits and credentials stay on the phone and out of logs: every log line, field and crash trace goes through `LogRedactor`.
+- Logs stay on the phone; Settings → Logs shares the newest 1 MB as one text file. Crash reports (ACRA) go only to Profiles whose user turned them on.
 - UI copy is Persian, in `res/values/strings.xml`; colours, fonts and radii come from the Asancart tokens only.
 
 ## Design

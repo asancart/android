@@ -33,11 +33,17 @@ import io.github.asancart.android.ui.theme.ThemeChoice
 import io.github.asancart.android.ui.theme.Tone
 
 /**
- * Settings (design screen 16). Not yet here: the automatic template update switch and
- * Settings -> Logs (REQ-OPS-012, T4.6).
+ * Settings (design screen 16). Not yet here: the automatic template update switch.
  */
 @Composable
-fun SettingsScreen(theme: ThemeChoice, onTheme: (ThemeChoice) -> Unit, versionName: String, missingPermissions: Int, onOpenPermissions: () -> Unit) {
+fun SettingsScreen(
+    theme: ThemeChoice,
+    onTheme: (ThemeChoice) -> Unit,
+    versionName: String,
+    missingPermissions: Int,
+    onOpenPermissions: () -> Unit,
+    onOpenLogs: () -> Unit = {},
+) {
     val c = AcTheme.colors
     Column(Modifier.fillMaxSize()) {
         BigTopBar(stringResource(R.string.settings_title))
@@ -86,6 +92,26 @@ fun SettingsScreen(theme: ThemeChoice, onTheme: (ThemeChoice) -> Unit, versionNa
             AcCard {
                 PrivacyRow(R.drawable.ic_send, Tone.OK, stringResource(R.string.privacy_sent_title), stringResource(R.string.privacy_sent_body))
                 PrivacyRow(R.drawable.ic_eyeoff, Tone.BAD, stringResource(R.string.privacy_never_title), stringResource(R.string.privacy_never_body))
+            }
+
+            // REQ-OPS-012, REQ-OPS-013.
+            ListGroup {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 56.dp)
+                        .clickable(role = Role.Button, onClick = onOpenLogs)
+                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    LeadIcon(R.drawable.ic_doc)
+                    Column(Modifier.weight(1f)) {
+                        Text(stringResource(R.string.settings_logs), style = AcTheme.type.bodyMedium)
+                        Text(stringResource(R.string.settings_logs_sub), style = AcTheme.type.small, color = c.muted)
+                    }
+                    AcIcon(R.drawable.ic_chev, tint = c.muted)
+                }
             }
 
             SectionTitle(stringResource(R.string.settings_section_about))

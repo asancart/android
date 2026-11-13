@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -19,6 +20,7 @@ import io.github.asancart.android.ui.MainShell
 import io.github.asancart.android.ui.activity.ActivityScreen
 import io.github.asancart.android.ui.activity.ActivityTab
 import io.github.asancart.android.ui.activity.UnparsedDetailScreen
+import io.github.asancart.android.ui.logs.LogsScreen
 import io.github.asancart.android.ui.permissions.PermissionStatus
 import io.github.asancart.android.ui.permissions.PermissionsScreen
 import io.github.asancart.android.ui.Tab
@@ -92,8 +94,27 @@ class ScreenshotTest {
 
     @Test fun permissionsLockedDark() = shoot("permissions-locked-dark", dark = true) { PermissionsScreen(locked, {}, {}, {}, {}, {}, {}, {}) }
 
+    @Test fun logsLight() = shoot("logs-light", dark = false) { SampleLogs() }
+
+    @Test fun logsDark() = shoot("logs-dark", dark = true) { SampleLogs() }
+
+    @Composable
+    private fun SampleLogs() = LogsScreen(
+        profiles = container.profiles.profiles.collectAsState().value,
+        optedIn = setOf(DEFAULT_PROFILE_ID),
+        lines = listOf(
+            "{\"time\":\"2026-11-12T10:00:00Z\",\"level\":\"INFO\",\"app\":\"android\",\"env\":\"debug\",\"msg\":\"profile_ready\",\"profile_id\":\"default\"}",
+            "{\"time\":\"2026-11-12T10:00:05Z\",\"level\":\"WARN\",\"app\":\"android\",\"env\":\"debug\",\"msg\":\"templates_refresh_failed\",\"http\":\"503\"}",
+        ),
+        onBack = {},
+        onCrashReports = { _, _ -> },
+        onShare = {},
+    )
+
     private fun shoot(name: String, dark: Boolean, content: @Composable () -> Unit) {
         val app = container
+        // The one-time crash-report question is a dialog: answered here so the screen is alone.
+        app.crashReports.markAsked()
         rule.setContent {
             CompositionLocalProvider(LocalAppContainer provides app, LocalLayoutDirection provides LayoutDirection.Rtl) {
                 // Screens drawn alone get the theme background the app's shell gives them.

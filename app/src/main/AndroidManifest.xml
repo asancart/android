@@ -42,6 +42,16 @@
                 <action android:name="android.provider.Telephony.SMS_RECEIVED" />
             </intent-filter>
         </receiver>
+        <!-- REQ-OPS-012: the log export is shared as one file; only the exports folder is reachable. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.logs"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/log_export_paths" />
+        </provider>
 
         <!-- REQ-APP-041: emoji2's startup initializer asks the system downloadable-font provider
              (androidx.content.action.LOAD_EMOJI_FONT) for an emoji font, and on most phones that

@@ -17,6 +17,10 @@ desugarJdkLibs = "2.1.5"
 junit = "4.13.2"
 androidxTest = "1.7.0"
 androidxTestJunit = "1.3.0"
+# Crash reports without Google services (REQ-OPS-013).
+acra = "5.14.2"
+# FileProvider for the log export (REQ-OPS-012); also comes transitively.
+androidxCore = "1.19.1"
 robolectric = "4.17"
 
 [libraries]
@@ -44,6 +48,8 @@ junit = { module = "junit:junit", version.ref = "junit" }
 androidx-test-runner = { module = "androidx.test:runner", version.ref = "androidxTest" }
 androidx-test-rules = { module = "androidx.test:rules", version.ref = "androidxTest" }
 androidx-test-ext-junit = { module = "androidx.test.ext:junit", version.ref = "androidxTestJunit" }
+acra-core = { module = "ch.acra:acra-core", version.ref = "acra" }
+androidx-core = { module = "androidx.core:core", version.ref = "androidxCore" }
 robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
 
 [plugins]

@@ -121,4 +121,19 @@
     <string name="perm_sms_locked">اندروید دسترسی پیامک را برای این برنامه قفل کرده یا برای همیشه رد کرده است. در صفحه اطلاعات برنامه، منوی ⋮ و بعد «اجازه به تنظیمات محدودشده» را بزنید و تأیید کنید، بعد در «مجوزها» پیامک را مجاز کنید. اگر این گزینه را نمی‌بینید، اول یک بار پیامک را همان‌جا مجاز کنید تا اندروید پیام تنظیم محدودشده را نشان دهد؛ بعد گزینه پیدا می‌شود.</string>
     <string name="perm_open_app_info">باز کردن اطلاعات برنامه</string>
     <string name="perm_camera_note">دسترسی دوربین فقط موقع اسکن کد QR پرسیده می‌شود.</string>
+    <string name="settings_logs">گزارش‌ها</string>
+    <string name="settings_logs_sub">فایل گزارش برنامه و گزارش خرابی</string>
+    <string name="logs_title">گزارش‌ها</string>
+    <string name="logs_crash_section">گزارش خرابی</string>
+    <string name="logs_crash_about">اگر برنامه از کار بیفتد، گزارش فنی آن به سرویس همان پروفایل فرستاده می‌شود: نسخه برنامه، نسخه اندروید، مدل گوشی و متن خطا. متن پیامک، مبلغ، مانده و رمزها در آن نیست.</string>
+    <string name="logs_crash_switch">ارسال گزارش خرابی به «%1$s»</string>
+    <string name="logs_file_section">فایل گزارش</string>
+    <string name="logs_file_about">گزارش برنامه فقط روی همین گوشی است و خودکار جایی فرستاده نمی‌شود. برای پیوست درخواست پشتیبانی، آخرین بخش آن (تا ۱ مگابایت) را در یک فایل متنی بفرستید.</string>
+    <string name="logs_share">اشتراک فایل گزارش</string>
+    <string name="logs_empty">هنوز گزارشی ثبت نشده است.</string>
+    <string name="logs_share_title">فایل گزارش آسان‌کارت</string>
+    <string name="crash_prompt_title">گزارش خرابی</string>
+    <string name="crash_prompt_body">اگر برنامه از کار بیفتد، گزارش فنی آن برای آسان‌کارت فرستاده شود؟ متن پیامک، مبلغ، مانده و رمزها در آن نیست. بعداً در «تنظیمات»، بخش «گزارش‌ها» می‌توانید عوضش کنید.</string>
+    <string name="crash_prompt_yes">بفرست</string>
+    <string name="crash_prompt_no">نه</string>
 </resources>
