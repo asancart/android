@@ -10,8 +10,10 @@ package io.github.asancart.android.log
  * - Persian or Arabic script (an SMS, a Shop or bank name) becomes `<text>`.
  * - Fields whose name says secret (`credential`, `token`, `password`, `otp`, `code`, `body`,
  *   `balance`, ...) lose their value; so do `Bearer …` and `key=value` / `"key":"value"` pairs.
- * - Card numbers, Sheba numbers and phone numbers are masked; any other number of 6 or more
- *   digits (amounts, balances, account numbers) becomes `<number>`. UUIDs are kept.
+ *   A JWT is removed wherever it stands.
+ * - Card numbers, Sheba numbers (also written with dashes or spaces) and phone numbers are
+ *   masked; any other number of 6 or more digits (amounts, balances, account numbers) becomes
+ *   `<number>`. UUIDs are kept.
  */
 object LogRedactor {
     const val REDACTED = "<redacted>"
@@ -24,6 +26,9 @@ object LogRedactor {
     fun isSecretKey(key: String): Boolean = SECRET_KEY.containsMatchIn(key) && key != "request_id"
 
     private val ARABIC_SCRIPT = Regex("[\\u0600-\\u06FF\\u0750-\\u077F\\u08A0-\\u08FF\\uFB50-\\uFDFF\\uFE70-\\uFEFF][\\u0600-\\u06FF\\u0750-\\u077F\\u08A0-\\u08FF\\uFB50-\\uFDFF\\uFE70-\\uFEFF\\u200C\\u200D\\s\\d.,:;!?()/+\\-*]*")
+    /** A JWT (or JWE) anywhere, e.g. after `token refresh`: base64url `{"` header, then dotted parts. */
+    private val JWT = Regex("(?<![A-Za-z0-9_-])eyJ[A-Za-z0-9_-]+(?:\\.[A-Za-z0-9_-]*){1,4}")
+
     /** `Bearer …`, `Token …`, `credential …`: the word, then the secret. */
     private val BEARER = Regex("(?i)\\b(Bearer|Basic|Token|credential)\\s+[A-Za-z0-9._~+/=-]+")
 
@@ -40,7 +45,8 @@ object LogRedactor {
         "(?i)(\"?)([A-Za-z_]*(?:credential|token|secret|password|passwd|otp|pin|pairing_code|pairing|authorization|cookie)[A-Za-z_]*)(\"?)(\\s*[:=]\\s*)(\"?)([^\\s\",;&}]+)",
     )
     private val UUID = Regex("\\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\\b")
-    private val SHEBA = Regex("(?i)\\bIR\\s?(\\d[\\d ]{21,30}\\d)")
+    /** IR and 24 digits (22 to 24 accepted, for typos), each optionally after one space or dash. */
+    private val SHEBA = Regex("(?i)\\bIR[ -]?(\\d{2}(?:[ -]?\\d){20,22})(?![\\d])")
     private val CARD = Regex("(?<![\\d])(\\d{4})[ -]?(\\d{4})[ -]?(\\d{4})[ -]?(\\d{4})(?![\\d])")
     /** Iranian mobile numbers, also written with spaces or dashes: `0912 123 4567`, `+98 912-123-4567`. */
     private val PHONE = Regex("(?<![\\d])(?:(?:\\+|00)98[ -]?|0)?9\\d{2}[ -]?\\d{3}[ -]?\\d{4}(?![\\d])")
@@ -50,6 +56,7 @@ object LogRedactor {
         if (text.isEmpty()) return text
         var s = toLatinDigits(text)
         s = ARABIC_SCRIPT.replace(s, "<text>")
+        s = JWT.replace(s, REDACTED)
         s = BEARER.replace(s) { "${it.groupValues[1]} $REDACTED" }
         s = KEY_VALUE.replace(s) { m -> m.groupValues[1] + m.groupValues[2] + m.groupValues[3] + m.groupValues[4] + m.groupValues[5] + REDACTED }
         s = JSON_CODE.replace(s) { m -> m.groupValues[1] + REDACTED + m.groupValues[3] }
