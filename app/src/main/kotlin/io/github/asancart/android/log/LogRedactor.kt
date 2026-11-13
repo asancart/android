@@ -11,9 +11,10 @@ package io.github.asancart.android.log
  * - Fields whose name says secret (`credential`, `token`, `password`, `otp`, `code`, `body`,
  *   `balance`, ...) lose their value; so do `Bearer …` and `key=value` / `"key":"value"` pairs.
  *   A JWT is removed wherever it stands.
- * - Card numbers, Sheba numbers (also written with dashes or spaces) and phone numbers are
- *   masked; any other number of 6 or more digits (amounts, balances, account numbers) becomes
- *   `<number>`. UUIDs are kept.
+ * - Card numbers, Sheba numbers (with any separator, also glued to a word) and phone numbers are
+ *   masked; any other number of 6 or more digits (amounts, balances, account numbers), or of 10 or
+ *   more digits written in groups, becomes `<number>`. UUIDs, dates, times and IPv4 addresses
+ *   are kept.
  */
 object LogRedactor {
     const val REDACTED = "<redacted>"
@@ -45,11 +46,33 @@ object LogRedactor {
         "(?i)(\"?)([A-Za-z_]*(?:credential|token|secret|password|passwd|otp|pin|pairing_code|pairing|authorization|cookie)[A-Za-z_]*)(\"?)(\\s*[:=]\\s*)(\"?)([^\\s\",;&}]+)",
     )
     private val UUID = Regex("\\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\\b")
-    /** IR and 24 digits (22 to 24 accepted, for typos), each optionally after one space or dash. */
-    private val SHEBA = Regex("(?i)\\bIR[ -]?(\\d{2}(?:[ -]?\\d){20,22})(?![\\d])")
-    private val CARD = Regex("(?<![\\d])(\\d{4})[ -]?(\\d{4})[ -]?(\\d{4})[ -]?(\\d{4})(?![\\d])")
+
+    /** What people put between digit groups: space, NBSP, narrow NBSP, ZWNJ, dot, dash. */
+    private const val SEP = "[ \\u00A0\\u202F\\u200C.\\-]"
+
+    /**
+     * IR and 24 digits (22 to 24 accepted, for typos), with any run of [SEP] between them. No word
+     * boundary before IR: `toIR82-…` is a Sheba too.
+     */
+    private val SHEBA = Regex("(?i)IR$SEP*(\\d{2}(?:$SEP*\\d){20,22})(?![\\d])")
+
+    /** A date (Gregorian or Jalali year) kept whole, so two dates side by side are not one number. */
+    private val DATE = Regex("(?<![\\d.\\-])(?:1[34]|19|20)\\d{2}-[01]\\d-[0-3]\\d(?![\\d.\\-])")
+
+    /** Not next to another digit group: a card or phone shape inside a longer run is not one. */
+    private const val ALONE_BEFORE = "(?<![\\d])(?<!\\d$SEP)"
+    private const val ALONE_AFTER = "(?![\\d])(?!$SEP\\d)"
+    private val CARD = Regex("$ALONE_BEFORE(\\d{4})[ -]?(\\d{4})[ -]?(\\d{4})[ -]?(\\d{4})$ALONE_AFTER")
+
     /** Iranian mobile numbers, also written with spaces or dashes: `0912 123 4567`, `+98 912-123-4567`. */
-    private val PHONE = Regex("(?<![\\d])(?:(?:\\+|00)98[ -]?|0)?9\\d{2}[ -]?\\d{3}[ -]?\\d{4}(?![\\d])")
+    private val PHONE = Regex("$ALONE_BEFORE(?:(?:\\+|00)98[ -]?|0)?9\\d{2}[ -]?\\d{3}[ -]?\\d{4}$ALONE_AFTER")
+
+    /**
+     * Digit groups joined by up to 3 [SEP] characters (`0105-1234-5678-01`). A group followed by `:`
+     * starts a time and is left out. Runs of 10 or more digits become `<number>`.
+     */
+    private val GROUPED = Regex("(?<![\\d])\\d+(?:$SEP{1,3}\\d+)+(?![\\d:])")
+    private val IPV4 = Regex("\\d{1,3}(?:\\.\\d{1,3}){3}")
     private val LONG_NUMBER = Regex("(?<![\\d])\\d[\\d,\\u066C]{4,}\\d(?![\\d])")
 
     fun redact(text: String): String {
@@ -61,21 +84,24 @@ object LogRedactor {
         s = KEY_VALUE.replace(s) { m -> m.groupValues[1] + m.groupValues[2] + m.groupValues[3] + m.groupValues[4] + m.groupValues[5] + REDACTED }
         s = JSON_CODE.replace(s) { m -> m.groupValues[1] + REDACTED + m.groupValues[3] }
 
-        // Keep UUIDs (Profile and report ids) out of the number rules.
-        val uuids = mutableListOf<String>()
-        s = UUID.replace(s) { m ->
-            uuids += m.value
-            "\u0000${uuids.size - 1}\u0000"
+        // Keep UUIDs (Profile and report ids) out of the number rules; dates once a Sheba is masked.
+        val kept = mutableListOf<String>()
+        fun keep(m: MatchResult): String {
+            kept += m.value
+            return "\u0000${kept.size - 1}\u0000"
         }
+        s = UUID.replace(s, ::keep)
         // Numbers with a known shape first: a dashed card number also fits the pairing-code shape.
         s = SHEBA.replace(s) { m -> "IR" + "*".repeat(20) + m.groupValues[1].filter(Char::isDigit).takeLast(4) }
+        s = DATE.replace(s, ::keep)
         s = CARD.replace(s) { m -> m.groupValues[1] + "********" + m.groupValues[4] }
         s = PHONE.replace(s) { m -> "*******" + m.value.filter(Char::isDigit).takeLast(4) }
+        s = GROUPED.replace(s) { m -> if (m.value.count(Char::isDigit) < 10 || IPV4.matches(m.value)) m.value else "<number>" }
         s = PAIRING_CODE.replace(s, REDACTED)
         s = DEVICE_CREDENTIAL.replace(s, REDACTED)
         s = OPAQUE_TOKEN.replace(s, REDACTED)
         s = LONG_NUMBER.replace(s) { m -> if (m.value.contains('*')) m.value else "<number>" }
-        uuids.forEachIndexed { i, u -> s = s.replace("\u0000$i\u0000", u) }
+        kept.forEachIndexed { i, u -> s = s.replace("\u0000$i\u0000", u) }
         return s
     }
 
