@@ -14,6 +14,7 @@ import io.github.asancart.android.core.template.ParserTemplate
 import io.github.asancart.android.core.template.StoredTemplate
 import io.github.asancart.android.core.template.TemplateSync
 import io.github.asancart.android.log.AppLog
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
@@ -47,7 +48,14 @@ class CaptureService(
     private val clock: () -> Instant = Instant::now,
 ) {
     private val dispatcher = Executors.newSingleThreadExecutor { Thread(it, "asancart-capture") }.asCoroutineDispatcher()
-    private val scope = CoroutineScope(SupervisorJob() + dispatcher)
+
+    /**
+     * A failure in one job is logged, not thrown: an uncaught one would kill the app, and the same
+     * SMS would kill it again on every start's re-scan. The SMS is not marked seen, so a fixed
+     * app or template set handles it later.
+     */
+    private val onFailure = CoroutineExceptionHandler { _, e -> log.error("capture_failed", e) }
+    private val scope = CoroutineScope(SupervisorJob() + dispatcher + onFailure)
 
     private val unparsedState = MutableStateFlow<List<UnparsedSms>>(emptyList())
     private val queueState = MutableStateFlow<Map<String, Int>>(emptyMap())

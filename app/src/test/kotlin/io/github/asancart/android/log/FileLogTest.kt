@@ -40,6 +40,8 @@ class FileLogTest {
     fun linesAreJsonAndRedacted() {
         val log = FileLog(tmp.newFolder("logs2"), env = "test", clock = { Instant.parse("2026-11-12T10:00:00Z") })
         log.warn("templates_refresh_failed", "http" to 503, "device_credential" to "dvc_secret_123")
+        // errorNow skips the queue (crash path): let the queued line land first so the order is fixed.
+        log.flush()
         log.errorNow("crash", IllegalStateException("bad \u0645\u0627\u0646\u062F\u0647:198,088,329"), "thread" to "main")
         log.flush()
         val lines = log.files().flatMap { it.readLines() }

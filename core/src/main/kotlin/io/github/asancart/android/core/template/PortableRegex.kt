@@ -44,7 +44,7 @@ class PortableRegex private constructor(
         private const val JS_SPACE = "\\t\\n\\x0B\\f\\r \\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000\\uFEFF"
         private const val JS_WORD = "A-Za-z0-9_"
         private const val JS_DIGIT = "0-9"
-        private val QUANTIFIER = Regex("""^\{\d+(,\d*)?}""")
+        private val QUANTIFIER = Regex("""^\{\d+(,\d*)?\}""")
 
         /**
          * Compiles [source] with flags `i` and/or `s` (REQ-DEV-040).

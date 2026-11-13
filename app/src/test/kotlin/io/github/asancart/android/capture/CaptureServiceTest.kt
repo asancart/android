@@ -51,8 +51,27 @@ class CaptureServiceTest {
 
     private class FakeInbox : InboxSource {
         val rows = mutableListOf<InboxSms>()
+        var failNext = false
 
-        override fun readSince(afterMillis: Long) = rows.filter { it.dateMillis > afterMillis }.sortedBy { it.dateMillis }
+        override fun readSince(afterMillis: Long): List<InboxSms> {
+            if (failNext) {
+                failNext = false
+                throw IllegalStateException("inbox unavailable")
+            }
+            return rows.filter { it.dateMillis > afterMillis }.sortedBy { it.dateMillis }
+        }
+    }
+
+    private class Events : AppLog {
+        val errors = mutableListOf<String>()
+
+        override fun info(event: String, vararg fields: Pair<String, Any?>) = Unit
+
+        override fun warn(event: String, vararg fields: Pair<String, Any?>) = Unit
+
+        override fun error(event: String, error: Throwable?, vararg fields: Pair<String, Any?>) {
+            errors += event
+        }
     }
 
     /** One sample template (written for these tests), or none until [ready]. */
@@ -74,8 +93,8 @@ class CaptureServiceTest {
 
     private val inbox = FakeInbox()
 
-    private fun service(store: CaptureStore = CaptureStore(context, null), api: DeviceApi = Templates(), now: Instant = t0) =
-        CaptureService(store, profiles, inbox, api, AppLog.forBuild(false), clock = { now })
+    private fun service(store: CaptureStore = CaptureStore(context, null), api: DeviceApi = Templates(), now: Instant = t0, log: AppLog = AppLog.forBuild(false)) =
+        CaptureService(store, profiles, inbox, api, log, clock = { now })
 
     private fun CaptureService.sync(block: CaptureService.() -> Unit) = runBlocking {
         block()
@@ -117,6 +136,23 @@ class CaptureServiceTest {
         s.sync { onReceived(listOf(IncomingSms("700717", deposit, t0.plusSeconds(5)))) }
         // The SMS app stores it a moment later; the next start re-scans it.
         inbox.rows += InboxSms(1, "700717", deposit, t0.plusSeconds(6).toEpochMilli())
+        s.sync { rescan() }
+        assertEquals(1, store.pending("p1").size)
+    }
+
+    @Test
+    fun aFailingJobIsLoggedAndRetriedNotFatal() {
+        val store = CaptureStore(context, null)
+        val events = Events()
+        val s = service(store, log = events)
+        s.sync { start() }
+        val checkpoint = store.meta(CaptureStore.KEY_INBOX_CHECKPOINT)
+        inbox.rows += InboxSms(1, "700717", deposit, t0.plusSeconds(10).toEpochMilli())
+        inbox.failNext = true
+        // An uncaught failure would end the app process, and the next start's re-scan would end it again.
+        s.sync { rescan() }
+        assertEquals(listOf("capture_failed"), events.errors)
+        assertEquals(checkpoint, store.meta(CaptureStore.KEY_INBOX_CHECKPOINT))
         s.sync { rescan() }
         assertEquals(1, store.pending("p1").size)
     }
