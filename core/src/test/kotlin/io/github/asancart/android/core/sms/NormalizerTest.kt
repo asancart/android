@@ -70,7 +70,7 @@ class NormalizerTest {
 
     @Test
     fun `amounts strip separators, reject non-integers and convert toman`() {
-        assertEquals(2_250_000L, DefaultTemplateEngine.parseAmount("2,250,000"))
+        assertEquals(2_750_000L, DefaultTemplateEngine.parseAmount("2,750,000"))
         assertEquals(17_280_000L, DefaultTemplateEngine.parseAmount("17\u066C280\u066C000"))
         assertEquals(1_000_000L, DefaultTemplateEngine.parseAmount("\u06F1\u06F0\u06F0\u06F0\u06F0\u06F0\u06F0"))
         assertNull(DefaultTemplateEngine.parseAmount("12.5"))

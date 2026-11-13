@@ -22,10 +22,10 @@ class DefaultTemplateEngineTest {
 
     @Test
     fun `deposit with fields, withdrawal ignored by keyword`() {
-        val r = engine.run(keyword, "\u062D\u0633\u0627\u06288065955489\n\u0648\u0627\u0631\u06CC\u06322,250,000", sender = "BANK X")
+        val r = engine.run(keyword, "\u062D\u0633\u0627\u06281122334455\n\u0648\u0627\u0631\u06CC\u06322,750,000", sender = "BANK X")
         assertEquals(TemplateStatus.DEPOSIT, r.status)
-        assertEquals(2_250_000L, r.amount)
-        assertEquals("8065955489", r.account)
+        assertEquals(2_750_000L, r.amount)
+        assertEquals("1122334455", r.account)
         assertEquals(TemplateStatus.IGNORED, engine.run(keyword, "\u062D\u0633\u0627\u06281\n\u0628\u0631\u062F\u0627\u0634\u062A500").status)
     }
 

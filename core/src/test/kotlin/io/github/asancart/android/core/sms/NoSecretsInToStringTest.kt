@@ -12,14 +12,14 @@ import kotlin.test.assertTrue
 
 /** REQ-OPS-003, REQ-OPS-011: objects that may end up in a log line never print SMS text, balances or secrets. */
 class NoSecretsInToStringTest {
-    private val body = "بانک ملت\nحساب8065955489\nواریز2,250,000\nمانده23,236,833\n05/08/20-13:55"
+    private val body = "بانک ملت\nحساب1122334455\nواریز2,750,000\nمانده20,230,000\n05/08/20-13:55"
 
     @Test
     fun `IncomingSms hides the SMS text and balance`() {
         val text = IncomingSms("Bank Mellat", body, Instant.parse("2026-11-12T10:25:00Z")).toString()
         assertFalse(text.contains("مانده"), text)
-        assertFalse(text.contains("23,236,833"), text)
-        assertFalse(text.contains("8065955489"), text)
+        assertFalse(text.contains("20,230,000"), text)
+        assertFalse(text.contains("1122334455"), text)
         assertTrue(text.contains("Bank Mellat"), text)
     }
 
@@ -28,13 +28,13 @@ class NoSecretsInToStringTest {
         val result = TemplateResult(
             templateName = "mellat-account",
             status = TemplateStatus.DEPOSIT,
-            amount = 2_250_000,
-            account = "8065955489",
+            amount = 2_750_000,
+            account = "1122334455",
             normalizedText = body,
         )
         val text = result.toString()
-        assertFalse(text.contains("8065955489"), text)
-        assertFalse(text.contains("23,236,833"), text)
+        assertFalse(text.contains("1122334455"), text)
+        assertFalse(text.contains("20,230,000"), text)
     }
 
     @Test

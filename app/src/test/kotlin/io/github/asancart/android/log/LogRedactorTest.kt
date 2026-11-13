@@ -74,7 +74,7 @@ class LogRedactorTest {
         val sheba = LogRedactor.redact("to IR820540102680020817909002")
         leaks("0540102680020817909002", sheba)
         assertTrue(sheba, sheba.endsWith("9002"))
-        leaks("8065955489", LogRedactor.redact("account 8065955489"))
+        leaks("1122334455", LogRedactor.redact("account 1122334455"))
     }
 
     @Test

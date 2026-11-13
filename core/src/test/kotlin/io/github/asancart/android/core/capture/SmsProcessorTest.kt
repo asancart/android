@@ -61,14 +61,14 @@ class SmsProcessorTest {
 
     private fun sms(body: String, sender: String = "BANK MELLAT", at: Instant = t0) = IncomingSms(sender, body, at)
 
-    private val depositText = "\u062D\u0633\u0627\u06288065955489\n\u0648\u0627\u0631\u06CC\u06322,250,000\n\u0645\u0627\u0646\u062F\u064723,236,833"
+    private val depositText = "\u062D\u0633\u0627\u06281122334455\n\u0648\u0627\u0631\u06CC\u06322,750,000\n\u0645\u0627\u0646\u062F\u064720,230,000"
 
     @Test
     fun `a deposit on a bound sender becomes one Transfer Report with the binding's Card Keys`() {
         val d = assertIs<CaptureDecision.Report>(processor.process(sms(depositText), listOf(profile()), templates).single())
         assertEquals("p1", d.profileId)
         assertEquals(listOf("ck_mellat"), d.report.cardKeys)
-        assertEquals(2_250_000L, d.report.amount)
+        assertEquals(2_750_000L, d.report.amount)
         assertEquals(t0, d.report.smsTime)
         assertEquals("r1", d.report.clientReportId)
     }

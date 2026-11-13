@@ -73,7 +73,7 @@ class ScreenshotTest {
     private val now = Instant.now()
     private val samples = listOf(
         UnparsedSms("u1", "p", "700717", "\u0628\u0627\u0646\u0643 \u0645\u0644\u064A \u0627\u064A\u0631\u0627\u0646\n\u0627\u0646\u062A\u0642\u0627\u0644 \u0627\u0632 6219:5,000,000+\n\u062D\u0633\u0627\u0628:10000\n\u0645\u0627\u0646\u062F\u0647:203,088,329\n0820-09:14", now.minusSeconds(3600), UnparsedReason.NO_TEMPLATE_MATCHED, null, listOf("melli-interest", "melli-account", "melli-otp")),
-        UnparsedSms("u2", "p", "Bank Mellat", "\u062D\u0633\u0627\u06288065955489\n\u0648\u0627\u0631\u06CC\u0632 \u0634\u0628\u06272,000,000\n\u0645\u0627\u0646\u062F\u064721,236,833\n05/08/19-18:30", now.minusSeconds(26 * 3600), UnparsedReason.DIRECTION_UNKNOWN, "mellat-account", listOf("mellat-interest", "mellat-account")),
+        UnparsedSms("u2", "p", "Bank Mellat", "\u062D\u0633\u0627\u06281122334455\n\u0648\u0627\u0631\u06CC\u0632 \u0634\u0628\u06272,000,000\n\u0645\u0627\u0646\u062F\u064717,480,000\n05/08/19-18:30", now.minusSeconds(26 * 3600), UnparsedReason.DIRECTION_UNKNOWN, "mellat-account", listOf("mellat-interest", "mellat-account")),
     )
 
     @Composable
