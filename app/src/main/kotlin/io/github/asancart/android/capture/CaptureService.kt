@@ -93,8 +93,11 @@ class CaptureService(
             val profile = profiles.profiles.value.firstOrNull { it.id == u.profileId } ?: continue
             when (val d = processor.reread(u.sms, profile, templates)) {
                 is CaptureDecision.Report -> {
-                    store.enqueue(d.profileId, d.report, clock())
-                    store.deleteUnparsed(u.id)
+                    // Together: a report queued while its unparsed entry stays could be queued twice.
+                    store.inTransaction {
+                        store.enqueue(d.profileId, d.report, clock())
+                        store.deleteUnparsed(u.id)
+                    }
                     log.info("unparsed_reread", "result" to "report", "profile_id" to d.profileId, "template" to d.templateName)
                 }
                 is CaptureDecision.Ignored -> {
@@ -168,20 +171,26 @@ class CaptureService(
         val fp = fingerprint(sms)
         if (store.seenNear(fp, sms.receivedAt, SAME_SMS_WINDOW.toMillis())) return false
         val templates = store.templates().map { it.template }
-        for (d in processor.process(sms, profiles.profiles.value, templates)) {
-            when (d) {
-                is CaptureDecision.Report -> {
-                    store.enqueue(d.profileId, d.report, clock())
-                    log.info("report_queued", "profile_id" to d.profileId, "template" to d.templateName)
-                }
-                is CaptureDecision.Ignored -> log.info("sms_ignored", "profile_id" to d.profileId, "template" to d.templateName)
-                is CaptureDecision.Unparsed -> {
-                    store.insertUnparsed(UnparsedSms(UUID.randomUUID().toString(), d.profileId, sms.sender, sms.body, sms.receivedAt, d.reason, d.templateName, d.templatesTried))
-                    log.info("sms_unparsed", "profile_id" to d.profileId, "reason" to d.reason)
+        val decisions = processor.process(sms, profiles.profiles.value, templates)
+        // One transaction: a crash before the SMS is marked seen leaves no queued report either, so
+        // the next re-scan (REQ-APP-011) queues it once, not again under a new client_report_id.
+        store.inTransaction {
+            for (d in decisions) {
+                when (d) {
+                    is CaptureDecision.Report -> store.enqueue(d.profileId, d.report, clock())
+                    is CaptureDecision.Ignored -> Unit
+                    is CaptureDecision.Unparsed -> store.insertUnparsed(UnparsedSms(UUID.randomUUID().toString(), d.profileId, sms.sender, sms.body, sms.receivedAt, d.reason, d.templateName, d.templatesTried))
                 }
             }
+            store.markSeen(fp, sms.receivedAt)
         }
-        store.markSeen(fp, sms.receivedAt)
+        for (d in decisions) {
+            when (d) {
+                is CaptureDecision.Report -> log.info("report_queued", "profile_id" to d.profileId, "template" to d.templateName)
+                is CaptureDecision.Ignored -> log.info("sms_ignored", "profile_id" to d.profileId, "template" to d.templateName)
+                is CaptureDecision.Unparsed -> log.info("sms_unparsed", "profile_id" to d.profileId, "reason" to d.reason)
+            }
+        }
         return true
     }
 
