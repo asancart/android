@@ -3,7 +3,7 @@ package io.github.asancart.android.core.template
 /**
  * Parser Template schema v1 (REQ-APP-005, REQ-DEV-040..042): the format shared by the server, the
  * admin panel and the app. Official templates come from REQ-DEV-004; custom ones are made on the
- * Device (DEC-014). JSON mapping and validation come with the engine in T4.2.
+ * Device (DEC-014). Read from JSON with [TemplateSchema], which validates it.
  */
 data class ParserTemplate(
     val schemaVersion: Int = 1,
@@ -19,7 +19,10 @@ data class ParserTemplate(
     val amountUnit: AmountUnit = AmountUnit.RIAL,
     /** 0..1000, lower runs first (REQ-DEV-053). */
     val priority: Int,
-)
+) {
+    /** An ignore template (`direction` fixed `out`) claims same-sender non-deposits (REQ-DEV-042). */
+    val isIgnore: Boolean get() = direction == Direction.Fixed(deposit = false)
+}
 
 /** REQ-DEV-050 steps; a missing flag means `true`. */
 data class NormalizeFlags(

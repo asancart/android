@@ -19,6 +19,16 @@ The Platform address is a build setting, not code: release builds use `https://a
 
 The debug APK lands in `app/build/outputs/apk/debug/`, the unsigned release APK in `app/build/outputs/apk/release/`. Screen captures from the unit tests land in `app/build/outputs/screenshots/`. CI ([`.github/workflows/android.yml`](.github/workflows/android.yml)) runs the same tasks on every pull request and uploads the signed debug APK and the screenshots as artifacts.
 
+## Parser Template fixtures
+
+The official Parser Templates and their fixtures (bank SMS samples) live in the private Asancart documents repository and are not published here. To run the fixture checks locally, copy them from a documents checkout:
+
+```sh
+scripts/sync-parser-templates.sh ../documents     # Node 22.6+ and Python 3
+```
+
+That fills the ignored `fixtures/` folder and the stub Device API's template list. `:core:test` then runs every fixture, cross-bank negative and reference pair on the JVM; `:app:connectedDebugAndroidTest` runs the same suite on a device. Without the copy those tests are skipped; the engine's own unit tests and the capture tests always run.
+
 ## Layout
 
 | Path | What |

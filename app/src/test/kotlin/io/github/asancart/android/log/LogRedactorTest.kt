@@ -101,6 +101,50 @@ class LogRedactorTest {
     }
 
     @Test
+    fun shebaWithAnySeparatorIsMaskedOrLosesItsDigits() {
+        // T4.13: separators as copied from bank apps, a Sheba glued to a word, and one without IR.
+        val groups = listOf("0540", "1026", "8002", "0817", "9090")
+        val masked = "IR********************9002"
+        for (written in listOf(
+            "IR82  0540  1026  8002  0817  9090  02",
+            "IR82 - 0540 - 1026 - 8002 - 0817 - 9090 - 02",
+            "IR82.0540.1026.8002.0817.9090.02",
+            "IR82\u00A00540\u00A01026\u00A08002\u00A00817\u00A09090\u00A002",
+            "IR82\u200C0540\u200C1026\u200C8002\u200C0817\u200C9090\u200C02",
+        )) {
+            val r = LogRedactor.redact("refund to $written requested")
+            assertEquals(written, "refund to $masked requested", r)
+        }
+        val glued = LogRedactor.redact("refund toIR82-0540-1026-8002-0817-9090-02 requested")
+        assertEquals("refund to$masked requested", glued)
+        val bare = LogRedactor.redact("refund to 82-0540-1026-8002-0817-9090-02 requested")
+        for (group in groups) leaks(group, bare)
+        assertEquals("refund to <number> requested", bare)
+    }
+
+    @Test
+    fun accountNumbersInGroupsLoseTheirDigits() {
+        // T4.13: LONG_NUMBER only caught runs of 6 or more digits.
+        for (written in listOf("0105-1234-5678-01", "0105 1234 5678 01", "0105.1234.5678.01", "0105 - 1234 - 5678 - 01", "0105-1234-5678-0123-45")) {
+            val r = LogRedactor.redact("account $written blocked")
+            assertEquals(written, "account <number> blocked", r)
+        }
+        // A card number in a longer run of groups is not a card: no first and last 4 left behind.
+        leaks("0540", LogRedactor.redact("x 82-0540-1026-8002-0817-90"))
+    }
+
+    @Test
+    fun datesTimesUuidsAndRequestIdsStayNextToTheNumberRules() {
+        val line = "sync from 2026-11-12 to 2026-11-13 at 2026-11-12 10:00:00 and 2026-11-12T10:00:00Z, " +
+            "jalali 1405-08-22 10:05, request_id=3f2a9c1e-0b7d-4e21-9a5c-6d8e0f1b2c3d " +
+            "profile 3f2b8c1e-4d5a-4e6f-8a9b-0c1d2e3f4a5b took 1.5 s, host 192.168.100.200 port 8080, " +
+            "http://10.0.2.2:8080/v1, version 0.1.0-debug, rows 12 of 340"
+        assertEquals(line, LogRedactor.redact(line))
+        // The phone and card shapes keep their masks.
+        assertEquals("card 6037********5678 tel *******4567", LogRedactor.redact("card 6037-9912-3456-5678 tel 0912-123-4567"))
+    }
+
+    @Test
     fun idsTimesCountsAndNamesStay() {
         val line = "report_queued profile_id=3f2b8c1e-4d5a-4e6f-8a9b-0c1d2e3f4a5b template=mellat-account at=2026-11-12T10:00:00Z rows=12 http=503 code_name=VALIDATION_FAILED"
         assertEquals(line, LogRedactor.redact(line))

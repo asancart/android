@@ -24,9 +24,17 @@ class NoSecretsInToStringTest {
     }
 
     @Test
-    fun `TemplateResult hides account digits`() {
-        val text = TemplateResult(TemplateStatus.DEPOSIT, "mellat-account", 2_750_000, account = "1122334455").toString()
+    fun `TemplateResult hides account digits and the SMS text`() {
+        val result = TemplateResult(
+            templateName = "mellat-account",
+            status = TemplateStatus.DEPOSIT,
+            amount = 2_750_000,
+            account = "1122334455",
+            normalizedText = body,
+        )
+        val text = result.toString()
         assertFalse(text.contains("1122334455"), text)
+        assertFalse(text.contains("20,230,000"), text)
     }
 
     @Test

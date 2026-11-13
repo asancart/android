@@ -33,11 +33,17 @@ import io.github.asancart.android.ui.theme.ThemeChoice
 import io.github.asancart.android.ui.theme.Tone
 
 /**
- * Settings (design screen 16). Not yet here: the permissions row (T4.2), automatic template
- * updates (T4.2) and Settings -> Logs (REQ-OPS-012, T4.6).
+ * Settings (design screen 16). Not yet here: the automatic template update switch.
  */
 @Composable
-fun SettingsScreen(theme: ThemeChoice, onTheme: (ThemeChoice) -> Unit, versionName: String, onOpenLogs: () -> Unit = {}) {
+fun SettingsScreen(
+    theme: ThemeChoice,
+    onTheme: (ThemeChoice) -> Unit,
+    versionName: String,
+    missingPermissions: Int,
+    onOpenPermissions: () -> Unit,
+    onOpenLogs: () -> Unit = {},
+) {
     val c = AcTheme.colors
     Column(Modifier.fillMaxSize()) {
         BigTopBar(stringResource(R.string.settings_title))
@@ -52,6 +58,34 @@ fun SettingsScreen(theme: ThemeChoice, onTheme: (ThemeChoice) -> Unit, versionNa
                 selected = theme,
                 onSelect = onTheme,
             )
+
+            SectionTitle(stringResource(R.string.settings_section_app))
+            ListGroup {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 56.dp)
+                        .clickable(role = Role.Button, onClick = onOpenPermissions)
+                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    LeadIcon(R.drawable.ic_shield, if (missingPermissions > 0) Tone.BAD else Tone.OK)
+                    Column(Modifier.weight(1f)) {
+                        Text(stringResource(R.string.settings_permissions), style = AcTheme.type.bodyMedium)
+                        Text(
+                            if (missingPermissions > 0) {
+                                stringResource(R.string.settings_permissions_missing, PersianFormat.number(missingPermissions.toLong()))
+                            } else {
+                                stringResource(R.string.settings_permissions_ok)
+                            },
+                            style = AcTheme.type.small,
+                            color = c.muted,
+                        )
+                    }
+                    AcIcon(R.drawable.ic_chev, tint = c.muted)
+                }
+            }
 
             // DEC-003, REQ-APP-012: what leaves the phone and what never does.
             SectionTitle(stringResource(R.string.settings_section_privacy))

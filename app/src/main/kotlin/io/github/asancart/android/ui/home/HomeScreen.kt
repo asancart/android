@@ -1,5 +1,6 @@
 package io.github.asancart.android.ui.home
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -16,6 +17,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
@@ -42,23 +44,32 @@ import io.github.asancart.android.ui.theme.AsancartMark
 import io.github.asancart.android.ui.theme.Tone
 
 @Composable
-fun HomeRoute() {
+fun HomeRoute(onOpenUnparsed: () -> Unit) {
     val container = LocalAppContainer.current
-    val vm = viewModel { HomeViewModel(container.profiles, container.smsPermissions::granted) }
+    val vm = viewModel { HomeViewModel(container.profiles, container.smsPermissions::granted, container.capture.queueSizes) }
     val state by vm.state.collectAsStateWithLifecycle()
-    HomeScreen(state, onToggle = vm::setEnabled)
+    val unparsed by container.capture.unparsed.collectAsStateWithLifecycle()
+    HomeScreen(state, unparsedCount = unparsed.size, onToggle = vm::setEnabled, onOpenUnparsed = onOpenUnparsed)
 }
 
 /**
- * Home (design screen 10, REQ-APP-029). Not yet here: the new-Profile button and "continue setup"
- * (pairing, T4.3), the failing-Profile and unparsed-SMS banners (T4.4, T4.2).
+ * Home (design screen 10, REQ-APP-029), with the unparsed-SMS banner (REQ-APP-015). Not yet here:
+ * the new-Profile button and "continue setup" (pairing, T4.3) and the failing-Profile banner (T4.4).
  */
 @Composable
-fun HomeScreen(state: HomeUiState, onToggle: (String, Boolean) -> Unit) {
+fun HomeScreen(state: HomeUiState, unparsedCount: Int, onToggle: (String, Boolean) -> Unit, onOpenUnparsed: () -> Unit) {
     Column(Modifier.fillMaxSize()) {
         HomeHeader()
         ScreenBody {
             if (state.showAllOk) AcBanner(R.drawable.ic_check, stringResource(R.string.home_all_ok), tone = Tone.OK)
+            if (unparsedCount > 0) {
+                AcBanner(
+                    icon = R.drawable.ic_sms,
+                    title = stringResource(R.string.home_unparsed_title, PersianFormat.number(unparsedCount.toLong())),
+                    body = stringResource(R.string.home_unparsed_body),
+                    modifier = Modifier.clickable(role = Role.Button, onClick = onOpenUnparsed),
+                )
+            }
             SectionTitle(stringResource(R.string.home_section_profiles))
             for (profile in state.profiles) ProfileCardView(profile, onToggle)
         }
