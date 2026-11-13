@@ -4,6 +4,8 @@ agp = "9.5.1"
 # Built-in Kotlin (AGP 9). Declaring the Kotlin JVM plugin in the root raises the KGP that AGP brings to this version.
 kotlin = "2.4.21"
 coroutines = "1.11.0"
+# JsonElement API only (no serialization compiler plugin): Parser Template bodies and fixtures.
+serializationJson = "1.13.0"
 composeBom = "2026.09.00"
 activity = "1.13.0"
 # lifecycle 2.11 compiles against API 37 and needs AGP >= 9.2.
@@ -13,6 +15,8 @@ startup = "1.2.0"
 # java.time and other JDK APIs on API 24-25 (core uses java.time).
 desugarJdkLibs = "2.1.5"
 junit = "4.13.2"
+androidxTest = "1.7.0"
+androidxTestJunit = "1.3.0"
 # Crash reports without Google services (REQ-OPS-013).
 acra = "5.14.2"
 # FileProvider for the log export (REQ-OPS-012); also comes transitively.
@@ -21,6 +25,7 @@ robolectric = "4.17"
 
 [libraries]
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serializationJson" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
 
 compose-bom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }
@@ -40,6 +45,9 @@ startup-runtime = { module = "androidx.startup:startup-runtime", version.ref = "
 
 desugar-jdk-libs = { module = "com.android.tools:desugar_jdk_libs", version.ref = "desugarJdkLibs" }
 junit = { module = "junit:junit", version.ref = "junit" }
+androidx-test-runner = { module = "androidx.test:runner", version.ref = "androidxTest" }
+androidx-test-rules = { module = "androidx.test:rules", version.ref = "androidxTest" }
+androidx-test-ext-junit = { module = "androidx.test.ext:junit", version.ref = "androidxTestJunit" }
 acra-core = { module = "ch.acra:acra-core", version.ref = "acra" }
 androidx-core = { module = "androidx.core:core", version.ref = "androidxCore" }
 robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }

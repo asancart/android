@@ -2,6 +2,9 @@ package io.github.asancart.android
 
 import android.content.Context
 import androidx.compose.runtime.staticCompositionLocalOf
+import io.github.asancart.android.capture.AndroidInbox
+import io.github.asancart.android.capture.CaptureService
+import io.github.asancart.android.capture.CaptureStore
 import io.github.asancart.android.capture.SmsPermissions
 import io.github.asancart.android.core.deviceapi.DeviceApi
 import io.github.asancart.android.core.deviceapi.StubDeviceApi
@@ -39,6 +42,9 @@ class AppContainer(context: Context) {
 
     /** REQ-OPS-013 opt-ins. */
     val crashReports = CrashReportPrefs.of(app)
+
+    /** SMS capture: receiver, inbox re-scan, unparsed list, outgoing queue (REQ-APP-010..017). */
+    val capture = CaptureService(CaptureStore(app), profiles, AndroidInbox(app, smsPermissions), deviceApi, log)
 
     init {
         // REQ-APP-021: the app never opens empty; the first launch already has its default Profile.

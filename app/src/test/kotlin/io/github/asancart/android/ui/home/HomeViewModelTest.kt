@@ -26,7 +26,7 @@ class HomeViewModelTest {
 
     @Test
     fun defaultProfileIsShownOffUnpairedAndBlocked() {
-        val card = HomeViewModel(repo) { false }.state.value.profiles.single()
+        val card = HomeViewModel(repo, { false }).state.value.profiles.single()
         assertEquals("پروفایل اصلی", card.name)
         assertTrue(card.isPlatform)
         assertEquals("10.0.2.2:8080", card.host)
@@ -38,7 +38,7 @@ class HomeViewModelTest {
 
     @Test
     fun turningOnIsRefusedWhileBlocked() {
-        val vm = HomeViewModel(repo) { true }
+        val vm = HomeViewModel(repo, { true })
         vm.setEnabled("p1", true)
         assertFalse(repo.profiles.value.single().enabled)
     }

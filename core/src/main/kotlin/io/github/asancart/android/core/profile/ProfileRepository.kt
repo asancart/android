@@ -4,6 +4,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import java.time.Instant
 import java.util.UUID
 
 /** Profiles on this Device (REQ-APP-020). */
@@ -16,8 +17,11 @@ interface ProfileRepository {
      */
     fun ensureDefaultProfile(name: String): Profile
 
+    /** Adds [profile], or replaces the one with its id. */
+    fun save(profile: Profile)
+
     /** The Profile's on/off switch. Callers check [activationBlockers] before turning one on. */
-    fun setEnabled(id: String, enabled: Boolean)
+    fun setEnabled(id: String, enabled: Boolean, at: Instant = Instant.now())
 }
 
 /** Keeps Profiles in memory. Replaced by on-disk storage with pairing in T4.3. */
@@ -37,7 +41,15 @@ class InMemoryProfileRepository(
         return state.value.first()
     }
 
-    override fun setEnabled(id: String, enabled: Boolean) {
-        state.update { current -> current.map { if (it.id == id) it.copy(enabled = enabled) else it } }
+    override fun save(profile: Profile) {
+        state.update { current ->
+            if (current.any { it.id == profile.id }) current.map { if (it.id == profile.id) profile else it } else current + profile
+        }
+    }
+
+    override fun setEnabled(id: String, enabled: Boolean, at: Instant) {
+        state.update { current ->
+            current.map { if (it.id == id) it.copy(enabled = enabled, enabledAt = if (enabled) at else null) else it }
+        }
     }
 }

@@ -48,5 +48,7 @@ class AsancartApp : Application() {
             container.fileLog.errorNow("crash", error, "thread" to thread.name)
             acra?.uncaughtException(thread, error)
         }
+        // REQ-APP-011: every start re-scans the inbox from the last checkpoint.
+        container.capture.start()
     }
 }
