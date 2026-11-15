@@ -52,7 +52,7 @@ data class TemplateResult(
     /** DEPOSIT only: Bank Registry fields the template did not capture (REQ-DEV-056). */
     val missingRequired: List<String> = emptyList(),
     val normalizedText: String = "",
-    /** INVALID_TEMPLATE: the regex error; BAD_AMOUNT: the captured raw amount. */
+    /** INVALID_TEMPLATE: the regex error or the tokens outside the dialect (REQ-DEV-041); BAD_AMOUNT: the captured raw amount. */
     val detail: String? = null,
 ) {
     val deposit: Boolean get() = status == TemplateStatus.DEPOSIT

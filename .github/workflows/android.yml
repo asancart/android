@@ -35,6 +35,11 @@ jobs:
       - name: Lint, unit tests, debug APK
         run: ./gradlew --continue --stacktrace :core:test :app:testDebugUnitTest :app:lintDebug :app:assembleDebug :app:assembleRelease
 
+      # T4.17: the REQ-DEV-041 dialect cases the engine is tested with match JavaScript RegExp, the
+      # admin panel's engine (the runner's preinstalled Node).
+      - name: Dialect cases against JavaScript
+        run: node scripts/check-dialect-cases.mjs
+
       # The debug APK is signed with the runner's generated debug key. Release signing is T4.5.
       - name: Verify APK signature
         run: |

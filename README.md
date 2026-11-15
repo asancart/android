@@ -29,6 +29,8 @@ scripts/sync-parser-templates.sh ../documents     # Node 22.6+ and Python 3
 
 That fills the ignored `fixtures/` folder and the stub Device API's template list. `:core:test` then runs every fixture, cross-bank negative and reference pair on the JVM; `:app:connectedDebugAndroidTest` runs the same suite on a device. Without the copy those tests are skipped; the engine's own unit tests and the capture tests always run.
 
+Template patterns follow the regex dialect the admin panel, the server and the app share (REQ-DEV-041). Its cases (every allowed construct, every refused token, patterns that don't compile) are the shared set every engine runs, kept here in line with REQ-DEV-041: [`regex-dialect-cases.json`](core/src/testFixtures/resources/io/github/asancart/android/core/template/fixtures/regex-dialect-cases.json). `:core:test` runs them on the JVM, the instrumented tests on Android's own regex engine, and `node scripts/check-dialect-cases.mjs` checks their expectations against JavaScript `RegExp`, the admin panel's engine.
+
 ## Layout
 
 | Path | What |

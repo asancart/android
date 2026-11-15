@@ -16,9 +16,12 @@ import kotlinx.serialization.json.doubleOrNull
 import io.github.asancart.android.core.sms.Normalizer
 
 /**
- * Parser Template schema v1 validation (REQ-DEV-040..042): a port of the reference validator
+ * Parser Template schema v1 validation (REQ-DEV-040..043): a port of the reference validator
  * (asancart/frontend apps/admin/src/templates/schema.ts `validateTemplateBody`), with the same
  * error paths and codes. A body the admin panel accepts is accepted here and the other way round.
+ * The pattern is checked against REQ-DEV-041's regex dialect before it is compiled: each token
+ * outside it is an error with code [Code.DIALECT] and the token as `detail`, and then the pattern
+ * isn't compiled, so [Code.REGEX] is only for a pattern inside the dialect that doesn't compile.
  */
 object TemplateSchema {
     const val SCHEMA_VERSION = 1
@@ -32,7 +35,26 @@ object TemplateSchema {
     private val NAME_RE = Regex("^[a-z0-9][a-z0-9-]*$")
     private val NAMED_GROUP = Regex("""\(\?<([A-Za-z_][A-Za-z0-9_]*)>""")
 
-    enum class Code { JSON, TYPE, REQUIRED, UNKNOWN_FIELD, SCHEMA_VERSION, EMPTY, NAME_FORMAT, NOT_ANCHORED, REGEX, AMOUNT_GROUP, UNKNOWN_GROUP, MISSING_GROUP, FLAGS, ENUM, INTEGER, KEYWORD_EMPTY }
+    /** REQ-DEV-043 codes; [wire] is the code as the admin engine and the Admin API spell it. */
+    enum class Code(val wire: String) {
+        JSON("json"),
+        TYPE("type"),
+        REQUIRED("required"),
+        UNKNOWN_FIELD("unknownField"),
+        SCHEMA_VERSION("schemaVersion"),
+        EMPTY("empty"),
+        NAME_FORMAT("nameFormat"),
+        NOT_ANCHORED("notAnchored"),
+        DIALECT("dialect"),
+        REGEX("regex"),
+        AMOUNT_GROUP("amountGroup"),
+        UNKNOWN_GROUP("unknownGroup"),
+        MISSING_GROUP("missingGroup"),
+        FLAGS("flags"),
+        ENUM("enum"),
+        INTEGER("integer"),
+        KEYWORD_EMPTY("keywordEmpty"),
+    }
 
     /** [path] as in the reference: `direction.in`, `sender_patterns[1]`, `""` for the whole body. */
     data class Error(val path: String, val code: Code, val detail: String? = null)
@@ -120,6 +142,8 @@ object TemplateSchema {
                 if (!isAnchored(pattern)) err("pattern", Code.NOT_ANCHORED)
                 try {
                     PortableRegex.compile(pattern, if (flagsOk) flags!! else "")
+                } catch (e: PortableRegex.DialectViolation) {
+                    for (token in e.tokens) err("pattern", Code.DIALECT, token)
                 } catch (e: PortableRegex.InvalidPattern) {
                     err("pattern", Code.REGEX, e.message)
                 }
