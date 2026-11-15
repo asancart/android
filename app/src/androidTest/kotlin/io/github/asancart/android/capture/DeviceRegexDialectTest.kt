@@ -30,7 +30,7 @@ class DeviceRegexDialectTest {
         val report = RegexDialectCases().run()
         Log.i("AsancartDialect", "API ${Build.VERSION.SDK_INT}: $report")
         assertTrue(report.toString(), report.failures.isEmpty())
-        assertTrue(report.toString(), report.allowed >= 51 && report.refused >= 129 && report.regex >= 7)
+        assertTrue(report.toString(), report.allowed >= 69 && report.refused >= 134 && report.regex >= 7)
     }
 
     @Test
@@ -44,6 +44,17 @@ class DeviceRegexDialectTest {
             assertNotNull(digit, PortableRegex.compile("^\\D$").matchWhole(digit))
         }
         assertNotNull(PortableRegex.compile("^\\d$").matchWhole("5"))
+    }
+
+    @Test
+    fun flagIFoldsAsciiLettersOnly() {
+        // Why flag i is a rewrite (T2.18): ICU's own folding takes the Kelvin sign for k (logged, not asserted).
+        val icu = Pattern.compile("^k$", Pattern.CASE_INSENSITIVE or Pattern.UNICODE_CASE).matcher("\u212A").matches()
+        Log.i("AsancartDialect", "API ${Build.VERSION.SDK_INT}: ICU case-insensitive k matches U+212A: $icu")
+        assertNull(PortableRegex.compile("^k$", "i").matchWhole("\u212A"))
+        assertNotNull(PortableRegex.compile("^k$", "i").matchWhole("K"))
+        assertNull(PortableRegex.compile("^ss$", "i").matchWhole("\u00DF"))
+        assertNotNull(PortableRegex.compile("^bki\\. ?ir$", "i").matchWhole("BKI.ir"))
     }
 
     @Test

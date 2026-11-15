@@ -21,6 +21,10 @@ import java.util.regex.PatternSyntaxException
  *   set syntax (`[:…:]`, `{…}`, `&`, ignored white space) never applies inside a class. A `-`
  *   that isn't a range is a literal, as in JavaScript.
  * - `.` excludes only `\n` (UNIX_LINES): JavaScript's `.` on normalized text.
+ * - Flag `i` folds ASCII letters only (T2.18): with it, an ASCII letter outside a class becomes a
+ *   class of both cases (`k` to `[kK]`) and a class gets the other case of every ASCII letter it
+ *   holds (`[a-f]` to `[a-fA-F]`, `[^k]` to `[^kK]`). Nothing is compiled case-insensitive, so
+ *   ICU's full case folding (ß and `ss`, the Kelvin sign and `k`) never applies.
  * The match is a full match, `Matcher.matches()`: the text matches `^(?:P)$` (T2.16).
  */
 class PortableRegex private constructor(
@@ -43,17 +47,16 @@ class PortableRegex private constructor(
 
     companion object {
         /**
-         * Compiles [source] with flags `i` and/or `s` (REQ-DEV-040): `i` is CASE_INSENSITIVE and
-         * UNICODE_CASE, `s` is DOTALL.
+         * Compiles [source] with flags `i` and/or `s` (REQ-DEV-040): `i` folds ASCII letters only, by
+         * the rewrite (T2.18); `s` is DOTALL.
          * @throws DialectViolation when a token is outside REQ-DEV-041's dialect; nothing is compiled.
          * @throws InvalidPattern when the pattern is inside the dialect but doesn't compile.
          */
         fun compile(source: String, flags: String = ""): PortableRegex {
-            val t = DialectTranslator(source).translate()
+            val t = DialectTranslator(source, foldAscii = 'i' in flags).translate()
             if (t.violations.isNotEmpty()) throw DialectViolation(t.violations)
             t.error?.let { throw InvalidPattern(it) }
             var f = Pattern.UNIX_LINES
-            if ('i' in flags) f = f or Pattern.CASE_INSENSITIVE or Pattern.UNICODE_CASE
             if ('s' in flags) f = f or Pattern.DOTALL
             val compiled = try {
                 Pattern.compile(t.java, f)
@@ -81,7 +84,7 @@ class PortableRegex private constructor(
  * first error of a pattern inside the dialect that still doesn't compile (an unclosed class, a
  * range out of order, a final `\`) is kept as [Result.error]; the JDK reports the others.
  */
-internal class DialectTranslator(private val src: String) {
+internal class DialectTranslator(private val src: String, private val foldAscii: Boolean = false) {
     class Result(val java: String, val groups: Map<String, Int>, val violations: List<String>, val error: String?)
 
     private val out = StringBuilder(src.length + 32)
@@ -114,7 +117,7 @@ internal class DialectTranslator(private val src: String) {
             when (c) {
                 '\\' -> {
                     when (val e = readEscape()) {
-                        is Escape.Literal -> out.append(escaped(e.c))
+                        is Escape.Literal -> out.append(literalOutside(e.c))
                         is Escape.Shorthand -> out.append(e.outside)
                         is Escape.Refused -> Unit
                     }
@@ -162,7 +165,11 @@ internal class DialectTranslator(private val src: String) {
         found += Token(at, token)
     }
 
-    /** A token outside the dialect at [i]: recorded and skipped; it counts as something to repeat. */
+    /**
+     * A token outside the dialect at [i]: recorded and skipped. A refused escape, `{…}`, `}` or `]`
+     * counts as something to repeat (`^\w+$` gives `\w` alone); a refused `(?` token doesn't, see
+     * [group] (T2.17).
+     */
     private fun refuse(token: String) {
         report(i, token)
         i += token.length
@@ -179,7 +186,7 @@ internal class DialectTranslator(private val src: String) {
         if (Character.isSurrogate(c)) {
             refuse(surrogateToken(i))
         } else {
-            out.append(escaped(c))
+            out.append(literalOutside(c))
             i++
             quantifiable = true
         }
@@ -270,6 +277,8 @@ internal class DialectTranslator(private val src: String) {
                 open += Frame(null)
             }
         }
+        // Every opener, refused or not (inline flags, lookbehind, `(?>`, other `(?`), leaves nothing
+        // to repeat: `^(?i)*a$` gives `(?i)` then `*` (T2.17).
         quantifiable = false
     }
 
@@ -304,6 +313,21 @@ internal class DialectTranslator(private val src: String) {
         open.lastOrNull()?.inner?.let { parent ->
             parent += f.inner
             f.named?.let { parent += it }
+        }
+    }
+
+    /** A literal outside a class; with flag i an ASCII letter is a class of both cases (`k` to `[kK]`). */
+    private fun literalOutside(c: Char): String {
+        val o = if (foldAscii) otherCase(c) else null
+        return if (o == null) escaped(c) else "[$c$o]"
+    }
+
+    /** Adds to [into] the other case of the ASCII letters in [lo]..[hi]: `a-f` adds `A-F`. */
+    private fun foldRange(lo: Char, hi: Char, into: StringBuilder) {
+        for ((first, last) in listOf('a' to 'z', 'A' to 'Z')) {
+            val a = maxOf(lo, first)
+            val b = minOf(hi, last)
+            if (a <= b) into.append(otherCase(a)!!).append('-').append(otherCase(b)!!)
         }
     }
 
@@ -402,6 +426,8 @@ internal class DialectTranslator(private val src: String) {
         val negated = i < src.length && src[i] == '^'
         if (negated) i++
         val body = StringBuilder()
+        // Flag i: the other case of each ASCII letter the class holds (T2.18).
+        val other = StringBuilder()
         var closed = false
         while (i < src.length) {
             if (src[i] == ']') {
@@ -412,7 +438,12 @@ internal class DialectTranslator(private val src: String) {
             val lo = classItem()
             // A range: an unescaped `-` between two items, not before the closing `]`.
             if (!(i + 1 < src.length && src[i] == '-' && src[i + 1] != ']')) {
-                if (lo.c != null) body.append(escaped(lo.c)) else if (lo.set != null) body.append(lo.set)
+                if (lo.c != null) {
+                    body.append(escaped(lo.c))
+                    if (foldAscii) otherCase(lo.c)?.let { other.append(escaped(it)) }
+                } else if (lo.set != null) {
+                    body.append(lo.set)
+                }
                 continue
             }
             i++
@@ -422,11 +453,14 @@ internal class DialectTranslator(private val src: String) {
                 lo.set != null || hi.set != null -> report(lo.at, lo.text + "-" + hi.text)
                 lo.refused || hi.refused -> Unit
                 lo.c!! > hi.c!! -> fail("range out of order in character class")
-                else -> body.append(escaped(lo.c!!)).append('-').append(escaped(hi.c!!))
+                else -> {
+                    body.append(escaped(lo.c!!)).append('-').append(escaped(hi.c!!))
+                    if (foldAscii) foldRange(lo.c, hi.c, other)
+                }
             }
         }
         if (!closed) fail("unterminated character class")
-        out.append(if (negated) "[^" else "[").append(body).append(']')
+        out.append(if (negated) "[^" else "[").append(body).append(other).append(']')
         quantifiable = true
     }
 
@@ -443,6 +477,13 @@ internal class DialectTranslator(private val src: String) {
         val NOT_SPACE = Escape.Shorthand("[^$ASCII_SPACE]", "\\u0000-\\u0008\\u000e-\\u001f\\u0021-\\x{10FFFF}")
 
         fun Char.isAsciiLetter(): Boolean = this in 'a'..'z' || this in 'A'..'Z'
+
+        /** The other case of an ASCII letter, else null. Nothing else has a case under flag i. */
+        fun otherCase(c: Char): Char? = when (c) {
+            in 'a'..'z' -> c - 32
+            in 'A'..'Z' -> c + 32
+            else -> null
+        }
 
         /** A literal character as `java.util.regex` source: an ASCII letter or digit as it is, else a `\u` escape. */
         fun escaped(c: Char): String =

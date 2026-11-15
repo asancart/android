@@ -1,7 +1,8 @@
 {
  "about": [
-  "REQ-DEV-041 regex dialect cases (asancart documents api/device-api.md: T2.15, T3.55, T2.16, T3.56), the shared case set every engine runs. Not SMS data.",
+  "REQ-DEV-041 regex dialect cases (asancart documents api/device-api.md: T2.15, T3.55, T2.16, T3.56, T2.17, T2.18), the shared case set every engine runs. Not SMS data.",
   "allowed: inside the dialect; each text is matched after REQ-DEV-050's always-on steps, as a full match: the text matches ^(?:P)$ (REQ-DEV-041); groups lists named groups for some texts (null: did not take part).",
+  "flag i folds ASCII letters only (T2.18): every engine rewrites the pattern (k to [kK], [a-f] to [a-fA-F]) and compiles it without its own case-insensitive option.",
   "refused: outside the dialect; tokens are the code dialect details, one per distinct token, in order of first occurrence.",
   "regex: inside the dialect, but no engine compiles it (code regex).",
   "Run on the JVM by :core:test, on Android's ICU by the app's instrumented tests, and against JavaScript RegExp (the admin engine's library) by scripts/check-dialect-cases.mjs."
@@ -716,6 +717,226 @@
     "a😀b",
     "ab"
    ]
+  },
+  {
+   "construct": "T2.18 flag i, ASCII letters only",
+   "pattern": "^i$",
+   "flags": "i",
+   "match": [
+    "i",
+    "I"
+   ],
+   "noMatch": [
+    "İ",
+    "ı"
+   ]
+  },
+  {
+   "construct": "T2.18 flag i, ASCII letters only",
+   "pattern": "^I$",
+   "flags": "i",
+   "match": [
+    "I",
+    "i"
+   ],
+   "noMatch": [
+    "ı",
+    "İ"
+   ]
+  },
+  {
+   "construct": "T2.18 flag i, ASCII letters only",
+   "pattern": "^s$",
+   "flags": "i",
+   "match": [
+    "s",
+    "S"
+   ],
+   "noMatch": [
+    "ſ"
+   ]
+  },
+  {
+   "construct": "T2.18 flag i, ASCII letters only",
+   "pattern": "^k$",
+   "flags": "i",
+   "match": [
+    "k",
+    "K"
+   ],
+   "noMatch": [
+    "K"
+   ]
+  },
+  {
+   "construct": "T2.18 flag i, ASCII letters only",
+   "pattern": "^\\x4B$",
+   "flags": "i",
+   "match": [
+    "K",
+    "k"
+   ],
+   "noMatch": [
+    "K"
+   ]
+  },
+  {
+   "construct": "T2.18 flag i, ASCII letters only",
+   "pattern": "^[a-f]$",
+   "flags": "i",
+   "match": [
+    "c",
+    "C"
+   ],
+   "noMatch": [
+    "g",
+    "G"
+   ]
+  },
+  {
+   "construct": "T2.18 flag i, ASCII letters only",
+   "pattern": "^[^k]$",
+   "flags": "i",
+   "match": [
+    "x",
+    "K"
+   ],
+   "noMatch": [
+    "k",
+    "K"
+   ]
+  },
+  {
+   "construct": "T2.18 flag i, ASCII letters only",
+   "pattern": "^[r-t]$",
+   "flags": "i",
+   "match": [
+    "s",
+    "S"
+   ],
+   "noMatch": [
+    "ſ"
+   ]
+  },
+  {
+   "construct": "T2.18 flag i, ASCII letters only",
+   "pattern": "^é$",
+   "flags": "i",
+   "match": [
+    "é"
+   ],
+   "noMatch": [
+    "É"
+   ]
+  },
+  {
+   "construct": "T2.18 flag i, ASCII letters only",
+   "pattern": "^å$",
+   "flags": "i",
+   "match": [
+    "å"
+   ],
+   "noMatch": [
+    "Å",
+    "Å"
+   ]
+  },
+  {
+   "construct": "T2.18 flag i, ASCII letters only",
+   "pattern": "^ß$",
+   "flags": "i",
+   "match": [
+    "ß"
+   ],
+   "noMatch": [
+    "ẞ"
+   ]
+  },
+  {
+   "construct": "T2.18 flag i, ASCII letters only",
+   "pattern": "^ss$",
+   "flags": "i",
+   "match": [
+    "ss",
+    "SS",
+    "sS"
+   ],
+   "noMatch": [
+    "ß",
+    "ẞ"
+   ]
+  },
+  {
+   "construct": "T2.18 flag i, ASCII letters only",
+   "pattern": "^θ$",
+   "flags": "i",
+   "match": [
+    "θ"
+   ],
+   "noMatch": [
+    "Θ",
+    "ϑ",
+    "ϴ"
+   ]
+  },
+  {
+   "construct": "T2.18 flag i, ASCII letters only",
+   "pattern": "^ω$",
+   "flags": "i",
+   "match": [
+    "ω"
+   ],
+   "noMatch": [
+    "Ω",
+    "Ω"
+   ]
+  },
+  {
+   "construct": "T2.18 flag i, ASCII letters only",
+   "pattern": "^\\u1F80$",
+   "flags": "i",
+   "match": [
+    "ᾀ"
+   ],
+   "noMatch": [
+    "ᾈ"
+   ]
+  },
+  {
+   "construct": "T2.18 flag i, ASCII letters only",
+   "pattern": "^\\uA7CE$",
+   "flags": "i",
+   "match": [
+    "꟎"
+   ],
+   "noMatch": [
+    "꟏"
+   ]
+  },
+  {
+   "construct": "T2.18 flag i, ASCII letters only",
+   "pattern": "^bki\\. ?ir$",
+   "flags": "i",
+   "match": [
+    "BKI.ir",
+    "bki. IR"
+   ],
+   "noMatch": [
+    "BKİ.ir",
+    "bkı.ir"
+   ]
+  },
+  {
+   "construct": "T2.18 flag i, ASCII letters only",
+   "pattern": "^fi$",
+   "flags": "i",
+   "match": [
+    "fi",
+    "FI"
+   ],
+   "noMatch": [
+    "ﬁ"
+   ]
   }
  ],
  "refused": [
@@ -1400,6 +1621,38 @@
    "pattern": "^(?<amount>a)(?<amount>b)$",
    "tokens": [
     "(?<amount>"
+   ]
+  },
+  {
+   "pattern": "^(?i)*a$",
+   "tokens": [
+    "(?i)",
+    "*"
+   ]
+  },
+  {
+   "pattern": "^(?>*a)$",
+   "tokens": [
+    "(?>",
+    "*"
+   ]
+  },
+  {
+   "pattern": "^\\w+$",
+   "tokens": [
+    "\\w"
+   ]
+  },
+  {
+   "pattern": "^a{x}*$",
+   "tokens": [
+    "{x}"
+   ]
+  },
+  {
+   "pattern": "^a]+$",
+   "tokens": [
+    "]"
    ]
   },
   {

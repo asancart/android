@@ -20,7 +20,7 @@ class PortableRegexTest {
         val report = RegexDialectCases().run()
         println(report)
         assertTrue(report.failures.isEmpty(), report.toString())
-        assertTrue(report.allowed >= 51 && report.refused >= 129 && report.regex >= 7, report.toString())
+        assertTrue(report.allowed >= 69 && report.refused >= 134 && report.regex >= 7, report.toString())
     }
 
     @Test
@@ -96,6 +96,10 @@ class PortableRegexTest {
         assertEquals(listOf("+"), PortableRegex.dialectViolations("^a*?+$"))
         assertEquals(listOf("(?<amount>"), PortableRegex.dialectViolations("^(?<amount>a)(?<amount>b)$"))
         assertEquals(listOf("\\d-z"), PortableRegex.dialectViolations("^[\\d-z]$"))
+        // A refused (? token is an opener: nothing to repeat after it. A refused escape is something to repeat.
+        assertEquals(listOf("(?i)", "*"), PortableRegex.dialectViolations("^(?i)*a$"))
+        assertEquals(listOf("(?<=", "+"), PortableRegex.dialectViolations("^(?<=+a)b$"))
+        assertEquals(listOf("\\w"), PortableRegex.dialectViolations("^\\w+$"))
     }
 
     @Test
@@ -122,6 +126,23 @@ class PortableRegexTest {
         assertEquals(emptyList(), PortableRegex.dialectViolations("^(?<amount>\\d)+(?:a)*(?<kind>b)$"))
         // Its own capture is the last repetition, as in every engine.
         assertEquals("3", whole("^(?<amount>\\d)+$", "123")!!["amount"])
+    }
+
+    private fun folded(p: String) = DialectTranslator(p, foldAscii = true).translate().java
+
+    @Test
+    fun `flag i folds ASCII letters only, by a rewrite (T2-18)`() {
+        assertEquals("^[kK][Kk]\\u002e$", folded("^k\\x4B\\.$"))
+        assertEquals("^[a-f0-9A-F][^kK][X-cA-Cx-z]$", folded("^[a-f0-9][^k][X-c]$"))
+        assertEquals("^\\u00e9[0-9]$", folded("^\\u00E9\\d$"))
+        // Named group names and quantifiers are not literals.
+        assertEquals("^([kK]){2}$", folded("^(?<amount>k){2}$"))
+        val kelvin = "\u212A"
+        assertNull(whole("^k$", kelvin, "i"))
+        assertNotNull(whole("^[^k]$", kelvin, "i"))
+        assertNull(whole("^ss$", "\u00DF", "i"))
+        assertNull(whole("^\u00E9$", "\u00C9", "i"))
+        assertNotNull(whole("^bki\\. ?ir$", "BKI. IR", "i"))
     }
 
     @Test
