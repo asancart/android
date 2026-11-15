@@ -45,6 +45,49 @@ class NormalizerTest {
         assertEquals("a\nb\nc", n("a\u2028b\u2029c"))
     }
 
+    private val allOff = NormalizeFlags(
+        bidiControls = false,
+        arabicLetters = false,
+        digits = false,
+        punctuation = false,
+        whitespace = false,
+        dropBlankLines = false,
+    )
+
+    @Test
+    fun `line breaks always become a newline, whatever the flags (REQ-DEV-050)`() {
+        assertEquals("a\nb\nc\nd\ne\nf", n("a\rb\r\nc\u0085d\u2028e\u2029f", allOff))
+        assertEquals("a\n\nb", n("a\r\rb", allOff))
+        assertEquals("a\n\nb", n("a\n\r\nb", allOff))
+    }
+
+    @Test
+    fun `odd whitespace always becomes a space and U+FEFF is removed, whatever the flags`() {
+        val odd = listOf('\u000B', '\u000C', '\u00A0', '\u1680', '\u202F', '\u205F', '\u3000') + ('\u2000'..'\u200A')
+        assertEquals(18, odd.size)
+        for (c in odd) assertEquals("a b", n("a${c}b", allOff), "U+%04X".format(c.code))
+        assertEquals("ab", n("a\uFEFFb", allOff))
+        assertEquals("\u0628\u0644\u0648", n("\uFEFF\u0628\u0644\u0648", allOff))
+        // Not whitespace: zero-width space, ZWNJ, direction marks and tab are left to the flags.
+        assertEquals("a\u200Bb\u200Cc\u200Ed\te", n("a\u200Bb\u200Cc\u200Ed\te", allOff))
+        assertEquals("a\u200Bb\u200Ccd e", n("a\u200Bb\u200Cc\u200Ed\te"))
+    }
+
+    @Test
+    fun `a character outside the BMP or a lone surrogate always becomes U+FFFD (T2-16)`() {
+        val emoji = String(Character.toChars(0x1F600))
+        assertEquals("a\uFFFDb\uFFFD", n("a${emoji}b$emoji", allOff))
+        assertEquals("\uFFFD\uFFFDx\uFFFD", n(Char(0xD800).toString() + Char(0xDC00) + Char(0xDC00) + "x" + Char(0xDBFF), allOff))
+        assertEquals("\uFFFD", n("\uFFFD", allOff))
+    }
+
+    @Test
+    fun `the always-on steps run first, so later steps see one kind of line break and space`() {
+        assertEquals("a b\nc", n("a\u00A0\u3000b\u2028\u2028c"))
+        assertEquals("a\nb", n("a\u0085\u0085b", NormalizeFlags(whitespace = false)))
+        assertEquals("12", Normalizer.alwaysOn("12"))
+    }
+
     @Test
     fun `disabled flags are respected`() {
         assertEquals("\u0628\u0627\u0646\u0643 \u06F1", n("\u0628\u0627\u0646\u0643 \u06F1", NormalizeFlags(arabicLetters = false, digits = false)))

@@ -1,0 +1,1790 @@
+{
+ "about": [
+  "REQ-DEV-041 regex dialect cases (asancart documents api/device-api.md: T2.15, T3.55, T2.16, T3.56, T2.17, T2.18), the shared case set every engine runs. Not SMS data.",
+  "allowed: inside the dialect; each text is matched after REQ-DEV-050's always-on steps, as a full match: the text matches ^(?:P)$ (REQ-DEV-041); groups lists named groups for some texts (null: did not take part).",
+  "flag i folds ASCII letters only (T2.18): every engine rewrites the pattern (k to [kK], [a-f] to [a-fA-F]) and compiles it without its own case-insensitive option.",
+  "refused: outside the dialect; tokens are the code dialect details, one per distinct token, in order of first occurrence.",
+  "regex: inside the dialect, but no engine compiles it (code regex).",
+  "Run on the JVM by :core:test, on Android's ICU by the app's instrumented tests, and against JavaScript RegExp (the admin engine's library) by scripts/check-dialect-cases.mjs."
+ ],
+ "allowed": [
+  {
+   "construct": "literal characters, Persian text and ZWNJ",
+   "pattern": "^حساب: ۱۲ می‌شود$",
+   "match": [
+    "حساب: ۱۲ می‌شود"
+   ],
+   "noMatch": [
+    "حساب: ۱۲ میشود",
+    "حساب: 12 می‌شود"
+   ]
+  },
+  {
+   "construct": "literal punctuation",
+   "pattern": "^a-b,c/d#e\"f'g<h>i=j!k@l%m&n~o;p_q:r s`t$",
+   "match": [
+    "a-b,c/d#e\"f'g<h>i=j!k@l%m&n~o;p_q:r s`t"
+   ],
+   "noMatch": [
+    "a-b"
+   ]
+  },
+  {
+   "construct": ". stops at \\n only",
+   "pattern": "^a.c$",
+   "match": [
+    "abc",
+    "a c",
+    "a۵c",
+    "a\tc"
+   ],
+   "noMatch": [
+    "a\nc",
+    "a\rc",
+    "ac",
+    "a c",
+    "a c",
+    "ac"
+   ]
+  },
+  {
+   "construct": "flag s: . also matches \\n",
+   "pattern": "^a.c$",
+   "flags": "s",
+   "match": [
+    "a\nc",
+    "a\rc",
+    "abc"
+   ],
+   "noMatch": [
+    "ac"
+   ]
+  },
+  {
+   "construct": "escaped metacharacters",
+   "pattern": "^\\.\\\\\\/\\-\\(\\)\\[\\]\\{\\}\\*\\+\\?\\|\\^\\$$",
+   "match": [
+    ".\\/-()[]{}*+?|^$"
+   ],
+   "noMatch": [
+    "x\\/-()[]{}*+?|^$"
+   ]
+  },
+  {
+   "construct": "\\n and \\t",
+   "pattern": "^a\\nb\\tc$",
+   "match": [
+    "a\nb\tc",
+    "a\r\nb\tc"
+   ],
+   "noMatch": [
+    "a nb tc",
+    "a\\nb\\tc",
+    "a\nb c"
+   ]
+  },
+  {
+   "construct": "\\xhh and \\uhhhh",
+   "pattern": "^\\x41\\x2c\\u06f1\\u200C$",
+   "match": [
+    "A,۱‌"
+   ],
+   "noMatch": [
+    "A,1‌",
+    "a,۱‌"
+   ]
+  },
+  {
+   "construct": "\\d is [0-9]",
+   "pattern": "^\\d+$",
+   "match": [
+    "0123456789"
+   ],
+   "noMatch": [
+    "۵",
+    "٥",
+    "५",
+    "০",
+    "５",
+    "12۳",
+    ""
+   ]
+  },
+  {
+   "construct": "\\D is [^0-9]",
+   "pattern": "^\\D$",
+   "match": [
+    "a",
+    "۵",
+    "٥",
+    "५",
+    " "
+   ],
+   "noMatch": [
+    "5",
+    ""
+   ]
+  },
+  {
+   "construct": "\\s is ASCII whitespace over normalized text",
+   "pattern": "^a\\sb$",
+   "match": [
+    "a b",
+    "a\tb",
+    "a\nb",
+    "a\u000bb",
+    "a\fb",
+    "a\rb",
+    "ab",
+    "a b",
+    "a b",
+    "a b",
+    "a b",
+    "a b",
+    "a b",
+    "a b",
+    "a　b"
+   ],
+   "noMatch": [
+    "ab",
+    "a﻿b",
+    "a​b",
+    "a‌b",
+    "a‎b"
+   ]
+  },
+  {
+   "construct": "\\S",
+   "pattern": "^a\\Sb$",
+   "match": [
+    "axb",
+    "a۵b",
+    "a‌b"
+   ],
+   "noMatch": [
+    "a b",
+    "a b",
+    "a\nb",
+    "a\tb"
+   ]
+  },
+  {
+   "construct": "class with ranges",
+   "pattern": "^[a-c۰-۹]+$",
+   "match": [
+    "abc",
+    "۱۲"
+   ],
+   "noMatch": [
+    "d",
+    "1",
+    "abcd"
+   ]
+  },
+  {
+   "construct": "negated class",
+   "pattern": "^[^a-c]$",
+   "match": [
+    "d",
+    "۵",
+    "\n"
+   ],
+   "noMatch": [
+    "a",
+    "c"
+   ]
+  },
+  {
+   "construct": "\\d inside a class",
+   "pattern": "^[\\d,]+$",
+   "match": [
+    "1,234"
+   ],
+   "noMatch": [
+    "۱,۲",
+    "1.2"
+   ]
+  },
+  {
+   "construct": "\\D inside a class",
+   "pattern": "^[\\D]$",
+   "match": [
+    "a",
+    "۵"
+   ],
+   "noMatch": [
+    "5"
+   ]
+  },
+  {
+   "construct": "\\d inside a negated class",
+   "pattern": "^[^\\d]$",
+   "match": [
+    "a",
+    "۵",
+    "५"
+   ],
+   "noMatch": [
+    "5"
+   ]
+  },
+  {
+   "construct": "\\D inside a negated class",
+   "pattern": "^[^\\D]$",
+   "match": [
+    "5"
+   ],
+   "noMatch": [
+    "۵",
+    "a"
+   ]
+  },
+  {
+   "construct": "[\\s\\S] is any character",
+   "pattern": "^[\\s\\S]+$",
+   "match": [
+    "a\nb c",
+    "۵"
+   ],
+   "noMatch": [
+    ""
+   ]
+  },
+  {
+   "construct": "\\s and \\S inside classes",
+   "pattern": "^[\\s]+[^\\s]+[\\S]+[^\\S]$",
+   "match": [
+    "  ab\n"
+   ],
+   "noMatch": [
+    "ab c"
+   ]
+  },
+  {
+   "construct": "escaped metacharacters inside a class",
+   "pattern": "^[\\]\\[\\-\\\\\\^\\.\\/\\(\\)\\{\\}\\*\\+\\?\\|\\$]+$",
+   "match": [
+    "][-\\^./(){}*+?|$"
+   ],
+   "noMatch": [
+    "a"
+   ]
+  },
+  {
+   "construct": "\\n \\t \\xhh \\uhhhh inside a class",
+   "pattern": "^[\\n\\t\\x41\\u06F1]+$",
+   "match": [
+    "\n\tA۱"
+   ],
+   "noMatch": [
+    "B",
+    "1"
+   ]
+  },
+  {
+   "construct": "ranges from escapes",
+   "pattern": "^[\\x41-\\x43\\u0627-\\u0628]+$",
+   "match": [
+    "ABCاب"
+   ],
+   "noMatch": [
+    "D",
+    "ت"
+   ]
+  },
+  {
+   "construct": "a leading or trailing - is literal",
+   "pattern": "^[-a][a-]$",
+   "match": [
+    "-a",
+    "a-"
+   ],
+   "noMatch": [
+    "b-"
+   ]
+  },
+  {
+   "construct": "a - next to \\d at an end of the class is literal",
+   "pattern": "^[\\d-]+[-\\d]$",
+   "match": [
+    "1-2",
+    "--"
+   ],
+   "noMatch": [
+    "a-1"
+   ]
+  },
+  {
+   "construct": "escaped - inside a class",
+   "pattern": "^[a\\-z]$",
+   "match": [
+    "-",
+    "a",
+    "z"
+   ],
+   "noMatch": [
+    "b"
+   ]
+  },
+  {
+   "construct": "- after a range is literal",
+   "pattern": "^[a-c-e]$",
+   "match": [
+    "b",
+    "-",
+    "e"
+   ],
+   "noMatch": [
+    "d"
+   ]
+  },
+  {
+   "construct": "ICU set syntax has no meaning: [:…:]",
+   "pattern": "^[:a:]+$",
+   "match": [
+    ":a:"
+   ],
+   "noMatch": [
+    "b"
+   ]
+  },
+  {
+   "construct": "ICU set syntax has no meaning: {…} and &",
+   "pattern": "^[{ab}&]+$",
+   "match": [
+    "{ab}&"
+   ],
+   "noMatch": [
+    "c"
+   ]
+  },
+  {
+   "construct": "space and other punctuation inside a class",
+   "pattern": "^[ $^.|?*+()#,:]+$",
+   "match": [
+    " $^.|?*+()#,:"
+   ],
+   "noMatch": [
+    "a"
+   ]
+  },
+  {
+   "construct": "groups, non-capturing groups and named groups",
+   "pattern": "^(a)(?:b)(?<amount>c)$",
+   "match": [
+    "abc"
+   ],
+   "noMatch": [
+    "ab"
+   ],
+   "groups": [
+    {
+     "text": "abc",
+     "named": {
+      "amount": "c"
+     }
+    }
+   ]
+  },
+  {
+   "construct": "named groups numbered after plain groups",
+   "pattern": "^(x)(?<account>\\d+)-(?<amount>\\d+)$",
+   "match": [
+    "x12-34"
+   ],
+   "noMatch": [
+    "x12-"
+   ],
+   "groups": [
+    {
+     "text": "x12-34",
+     "named": {
+      "account": "12",
+      "amount": "34"
+     }
+    }
+   ]
+  },
+  {
+   "construct": "a group that didn't take part is absent",
+   "pattern": "^(?<amount>\\d+)(?<reference>-\\d+)?$",
+   "match": [
+    "12",
+    "12-3"
+   ],
+   "noMatch": [],
+   "groups": [
+    {
+     "text": "12",
+     "named": {
+      "amount": "12",
+      "reference": null
+     }
+    },
+    {
+     "text": "12-3",
+     "named": {
+      "amount": "12",
+      "reference": "-3"
+     }
+    }
+   ]
+  },
+  {
+   "construct": "alternation inside a group",
+   "pattern": "^(?<kind>واریز|برداشت)(?<amount>[\\d,]+)$",
+   "match": [
+    "واریز1,000",
+    "برداشت5"
+   ],
+   "noMatch": [
+    "انتقال5"
+   ],
+   "groups": [
+    {
+     "text": "واریز1,000",
+     "named": {
+      "kind": "واریز",
+      "amount": "1,000"
+     }
+    }
+   ]
+  },
+  {
+   "construct": "| inside a non-capturing group",
+   "pattern": "^(?:a|bc)$",
+   "match": [
+    "a",
+    "bc"
+   ],
+   "noMatch": [
+    "abc",
+    ""
+   ]
+  },
+  {
+   "construct": "lookahead (?=…)",
+   "pattern": "^(?=\\d)(?<amount>\\d+)$",
+   "match": [
+    "12"
+   ],
+   "noMatch": [
+    "a1"
+   ]
+  },
+  {
+   "construct": "lookahead (?!…), the REQ-PT-005 guard",
+   "pattern": "^(?![\\s\\S]*(?:واریز|نشست|\\d\\+|\\+\\d))[\\s\\S]*رمز[\\s\\S]*$",
+   "match": [
+    "رمز 1234",
+    "کد\nرمز 99"
+   ],
+   "noMatch": [
+    "رمز 1234\nواریز",
+    "رمز 1+",
+    "رمز +1"
+   ]
+  },
+  {
+   "construct": "quantifiers * + ? {n} {n,} {n,m}",
+   "pattern": "^a*b+c?d{2}e{1,}f{1,2}$",
+   "match": [
+    "bbddeff",
+    "aaabcddeeef"
+   ],
+   "noMatch": [
+    "bddff",
+    "bbdddeff",
+    "bddefff"
+   ]
+  },
+  {
+   "construct": "lazy +?",
+   "pattern": "^(?<amount>\\d+?)(?<reference>\\d*)$",
+   "match": [
+    "123"
+   ],
+   "noMatch": [],
+   "groups": [
+    {
+     "text": "123",
+     "named": {
+      "amount": "1",
+      "reference": "23"
+     }
+    }
+   ]
+  },
+  {
+   "construct": "lazy *?",
+   "pattern": "^(?<amount>\\d*?)(?<reference>\\d+)$",
+   "match": [
+    "123"
+   ],
+   "noMatch": [],
+   "groups": [
+    {
+     "text": "123",
+     "named": {
+      "amount": "",
+      "reference": "123"
+     }
+    }
+   ]
+  },
+  {
+   "construct": "lazy ??",
+   "pattern": "^(?<amount>a??)(?<reference>a*)$",
+   "match": [
+    "aa"
+   ],
+   "noMatch": [],
+   "groups": [
+    {
+     "text": "aa",
+     "named": {
+      "amount": "",
+      "reference": "aa"
+     }
+    }
+   ]
+  },
+  {
+   "construct": "lazy {n}? {n,}? {n,m}?",
+   "pattern": "^(?<amount>\\d{2}?)(?<account>\\d{2,}?)(?<reference>\\d{1,3}?)(?<channel>\\d*)$",
+   "match": [
+    "1234567"
+   ],
+   "noMatch": [],
+   "groups": [
+    {
+     "text": "1234567",
+     "named": {
+      "amount": "12",
+      "account": "34",
+      "reference": "5",
+      "channel": "67"
+     }
+    }
+   ]
+  },
+  {
+   "construct": "^ first and $ last: a full match",
+   "pattern": "^a$",
+   "match": [
+    "a"
+   ],
+   "noMatch": [
+    "a\nx",
+    "ba",
+    "ab",
+    "a\n"
+   ]
+  },
+  {
+   "construct": "flag i: case-insensitive",
+   "pattern": "^abc[d-f]$",
+   "flags": "i",
+   "match": [
+    "ABCE",
+    "aBcd"
+   ],
+   "noMatch": [
+    "abcg"
+   ]
+  },
+  {
+   "construct": "flag i leaves Persian alone",
+   "pattern": "^بانک$",
+   "flags": "i",
+   "match": [
+    "بانک"
+   ],
+   "noMatch": [
+    "بانك"
+   ]
+  },
+  {
+   "construct": "flags i and s together",
+   "pattern": "^a.b$",
+   "flags": "is",
+   "match": [
+    "A\nB"
+   ],
+   "noMatch": [
+    "a\n\nb"
+   ]
+  },
+  {
+   "construct": "| at the top level: a full match of ^(?:P)$",
+   "pattern": "^a|ab$",
+   "match": [
+    "a",
+    "ab"
+   ],
+   "noMatch": [
+    "b",
+    "aab",
+    "abb"
+   ]
+  },
+  {
+   "construct": "| at the top level with groups",
+   "pattern": "^(?<amount>\\d+)|x(?<kind>y)$",
+   "match": [
+    "12",
+    "xy"
+   ],
+   "noMatch": [
+    "12xy",
+    "x"
+   ],
+   "groups": [
+    {
+     "text": "xy",
+     "named": {
+      "amount": null,
+      "kind": "y"
+     }
+    },
+    {
+     "text": "12",
+     "named": {
+      "amount": "12",
+      "kind": null
+     }
+    }
+   ]
+  },
+  {
+   "construct": "a named group repeated itself keeps its last repetition",
+   "pattern": "^(?<amount>\\d)+$",
+   "match": [
+    "123"
+   ],
+   "noMatch": [
+    "12a"
+   ],
+   "groups": [
+    {
+     "text": "123",
+     "named": {
+      "amount": "3"
+     }
+    }
+   ]
+  },
+  {
+   "construct": "a named group inside ?, {0,1} and {1}",
+   "pattern": "^(?:(?<amount>\\d+)x)?(?:(?<kind>[a-z])-){0,1}(?:(?<reference>\\d)){1}$",
+   "match": [
+    "12xk-5",
+    "5"
+   ],
+   "noMatch": [
+    "12x12x5"
+   ],
+   "groups": [
+    {
+     "text": "5",
+     "named": {
+      "amount": null,
+      "kind": null,
+      "reference": "5"
+     }
+    }
+   ]
+  },
+  {
+   "construct": "plain groups may sit in a repeating group",
+   "pattern": "^(?:(a)(?:b))*$",
+   "match": [
+    "abab",
+    ""
+   ],
+   "noMatch": [
+    "aba"
+   ]
+  },
+  {
+   "construct": "a character outside the BMP in the text is U+FFFD",
+   "pattern": "^a\\uFFFD.b$",
+   "match": [
+    "a😀😀b",
+    "a�xb"
+   ],
+   "noMatch": [
+    "a😀b",
+    "ab"
+   ]
+  },
+  {
+   "construct": "T2.18 flag i, ASCII letters only",
+   "pattern": "^i$",
+   "flags": "i",
+   "match": [
+    "i",
+    "I"
+   ],
+   "noMatch": [
+    "İ",
+    "ı"
+   ]
+  },
+  {
+   "construct": "T2.18 flag i, ASCII letters only",
+   "pattern": "^I$",
+   "flags": "i",
+   "match": [
+    "I",
+    "i"
+   ],
+   "noMatch": [
+    "ı",
+    "İ"
+   ]
+  },
+  {
+   "construct": "T2.18 flag i, ASCII letters only",
+   "pattern": "^s$",
+   "flags": "i",
+   "match": [
+    "s",
+    "S"
+   ],
+   "noMatch": [
+    "ſ"
+   ]
+  },
+  {
+   "construct": "T2.18 flag i, ASCII letters only",
+   "pattern": "^k$",
+   "flags": "i",
+   "match": [
+    "k",
+    "K"
+   ],
+   "noMatch": [
+    "K"
+   ]
+  },
+  {
+   "construct": "T2.18 flag i, ASCII letters only",
+   "pattern": "^\\x4B$",
+   "flags": "i",
+   "match": [
+    "K",
+    "k"
+   ],
+   "noMatch": [
+    "K"
+   ]
+  },
+  {
+   "construct": "T2.18 flag i, ASCII letters only",
+   "pattern": "^[a-f]$",
+   "flags": "i",
+   "match": [
+    "c",
+    "C"
+   ],
+   "noMatch": [
+    "g",
+    "G"
+   ]
+  },
+  {
+   "construct": "T2.18 flag i, ASCII letters only",
+   "pattern": "^[^k]$",
+   "flags": "i",
+   "match": [
+    "x",
+    "K"
+   ],
+   "noMatch": [
+    "k",
+    "K"
+   ]
+  },
+  {
+   "construct": "T2.18 flag i, ASCII letters only",
+   "pattern": "^[r-t]$",
+   "flags": "i",
+   "match": [
+    "s",
+    "S"
+   ],
+   "noMatch": [
+    "ſ"
+   ]
+  },
+  {
+   "construct": "T2.18 flag i, ASCII letters only",
+   "pattern": "^é$",
+   "flags": "i",
+   "match": [
+    "é"
+   ],
+   "noMatch": [
+    "É"
+   ]
+  },
+  {
+   "construct": "T2.18 flag i, ASCII letters only",
+   "pattern": "^å$",
+   "flags": "i",
+   "match": [
+    "å"
+   ],
+   "noMatch": [
+    "Å",
+    "Å"
+   ]
+  },
+  {
+   "construct": "T2.18 flag i, ASCII letters only",
+   "pattern": "^ß$",
+   "flags": "i",
+   "match": [
+    "ß"
+   ],
+   "noMatch": [
+    "ẞ"
+   ]
+  },
+  {
+   "construct": "T2.18 flag i, ASCII letters only",
+   "pattern": "^ss$",
+   "flags": "i",
+   "match": [
+    "ss",
+    "SS",
+    "sS"
+   ],
+   "noMatch": [
+    "ß",
+    "ẞ"
+   ]
+  },
+  {
+   "construct": "T2.18 flag i, ASCII letters only",
+   "pattern": "^θ$",
+   "flags": "i",
+   "match": [
+    "θ"
+   ],
+   "noMatch": [
+    "Θ",
+    "ϑ",
+    "ϴ"
+   ]
+  },
+  {
+   "construct": "T2.18 flag i, ASCII letters only",
+   "pattern": "^ω$",
+   "flags": "i",
+   "match": [
+    "ω"
+   ],
+   "noMatch": [
+    "Ω",
+    "Ω"
+   ]
+  },
+  {
+   "construct": "T2.18 flag i, ASCII letters only",
+   "pattern": "^\\u1F80$",
+   "flags": "i",
+   "match": [
+    "ᾀ"
+   ],
+   "noMatch": [
+    "ᾈ"
+   ]
+  },
+  {
+   "construct": "T2.18 flag i, ASCII letters only",
+   "pattern": "^\\uA7CE$",
+   "flags": "i",
+   "match": [
+    "꟎"
+   ],
+   "noMatch": [
+    "꟏"
+   ]
+  },
+  {
+   "construct": "T2.18 flag i, ASCII letters only",
+   "pattern": "^bki\\. ?ir$",
+   "flags": "i",
+   "match": [
+    "BKI.ir",
+    "bki. IR"
+   ],
+   "noMatch": [
+    "BKİ.ir",
+    "bkı.ir"
+   ]
+  },
+  {
+   "construct": "T2.18 flag i, ASCII letters only",
+   "pattern": "^fi$",
+   "flags": "i",
+   "match": [
+    "fi",
+    "FI"
+   ],
+   "noMatch": [
+    "ﬁ"
+   ]
+  }
+ ],
+ "refused": [
+  {
+   "pattern": "^a\\wb$",
+   "tokens": [
+    "\\w"
+   ]
+  },
+  {
+   "pattern": "^a\\Wb$",
+   "tokens": [
+    "\\W"
+   ]
+  },
+  {
+   "pattern": "^a\\bb$",
+   "tokens": [
+    "\\b"
+   ]
+  },
+  {
+   "pattern": "^a\\Bb$",
+   "tokens": [
+    "\\B"
+   ]
+  },
+  {
+   "pattern": "^\\p{L}+$",
+   "tokens": [
+    "\\p{L}"
+   ]
+  },
+  {
+   "pattern": "^\\P{Nd}$",
+   "tokens": [
+    "\\P{Nd}"
+   ]
+  },
+  {
+   "pattern": "^(a)\\1$",
+   "tokens": [
+    "\\1"
+   ]
+  },
+  {
+   "pattern": "^(?<amount>a)\\k<amount>$",
+   "tokens": [
+    "\\k<amount>"
+   ]
+  },
+  {
+   "pattern": "^\\0$",
+   "tokens": [
+    "\\0"
+   ]
+  },
+  {
+   "pattern": "^(a)(b)(c)(d)(e)(f)(g)(h)(i)(j)(k)(l)\\12$",
+   "tokens": [
+    "\\12"
+   ]
+  },
+  {
+   "pattern": "^(?<=a)b$",
+   "tokens": [
+    "(?<="
+   ]
+  },
+  {
+   "pattern": "^(?<!a)b$",
+   "tokens": [
+    "(?<!"
+   ]
+  },
+  {
+   "pattern": "^(?>a)$",
+   "tokens": [
+    "(?>"
+   ]
+  },
+  {
+   "pattern": "^(?i)a$",
+   "tokens": [
+    "(?i)"
+   ]
+  },
+  {
+   "pattern": "^(?i:a)$",
+   "tokens": [
+    "(?i:"
+   ]
+  },
+  {
+   "pattern": "^(?-s:a.b)$",
+   "tokens": [
+    "(?-s:"
+   ]
+  },
+  {
+   "pattern": "^(?#note)a$",
+   "tokens": [
+    "(?#"
+   ]
+  },
+  {
+   "pattern": "^(?P<amount>1)$",
+   "tokens": [
+    "(?P"
+   ]
+  },
+  {
+   "pattern": "^(?<1a>x)$",
+   "tokens": [
+    "(?<1a>"
+   ]
+  },
+  {
+   "pattern": "^(?<a_b>x)$",
+   "tokens": [
+    "(?<a_b>"
+   ]
+  },
+  {
+   "pattern": "^(?<مبلغ>x)$",
+   "tokens": [
+    "(?<مبلغ>"
+   ]
+  },
+  {
+   "pattern": "^(?<amount\\d)$",
+   "tokens": [
+    "(?<"
+   ]
+  },
+  {
+   "pattern": "^a*+$",
+   "tokens": [
+    "*+"
+   ]
+  },
+  {
+   "pattern": "^a++$",
+   "tokens": [
+    "++"
+   ]
+  },
+  {
+   "pattern": "^a?+$",
+   "tokens": [
+    "?+"
+   ]
+  },
+  {
+   "pattern": "^a{2}+$",
+   "tokens": [
+    "}+"
+   ]
+  },
+  {
+   "pattern": "^a{2,}+$",
+   "tokens": [
+    "}+"
+   ]
+  },
+  {
+   "pattern": "^a{2,3}+$",
+   "tokens": [
+    "}+"
+   ]
+  },
+  {
+   "pattern": "^a\\a$",
+   "tokens": [
+    "\\a"
+   ]
+  },
+  {
+   "pattern": "^a\\b$",
+   "tokens": [
+    "\\b"
+   ]
+  },
+  {
+   "pattern": "^a\\c$",
+   "tokens": [
+    "\\c"
+   ]
+  },
+  {
+   "pattern": "^a\\e$",
+   "tokens": [
+    "\\e"
+   ]
+  },
+  {
+   "pattern": "^a\\f$",
+   "tokens": [
+    "\\f"
+   ]
+  },
+  {
+   "pattern": "^a\\g$",
+   "tokens": [
+    "\\g"
+   ]
+  },
+  {
+   "pattern": "^a\\h$",
+   "tokens": [
+    "\\h"
+   ]
+  },
+  {
+   "pattern": "^a\\i$",
+   "tokens": [
+    "\\i"
+   ]
+  },
+  {
+   "pattern": "^a\\j$",
+   "tokens": [
+    "\\j"
+   ]
+  },
+  {
+   "pattern": "^a\\k$",
+   "tokens": [
+    "\\k"
+   ]
+  },
+  {
+   "pattern": "^a\\l$",
+   "tokens": [
+    "\\l"
+   ]
+  },
+  {
+   "pattern": "^a\\m$",
+   "tokens": [
+    "\\m"
+   ]
+  },
+  {
+   "pattern": "^a\\o$",
+   "tokens": [
+    "\\o"
+   ]
+  },
+  {
+   "pattern": "^a\\p$",
+   "tokens": [
+    "\\p"
+   ]
+  },
+  {
+   "pattern": "^a\\q$",
+   "tokens": [
+    "\\q"
+   ]
+  },
+  {
+   "pattern": "^a\\r$",
+   "tokens": [
+    "\\r"
+   ]
+  },
+  {
+   "pattern": "^a\\u$",
+   "tokens": [
+    "\\u"
+   ]
+  },
+  {
+   "pattern": "^a\\v$",
+   "tokens": [
+    "\\v"
+   ]
+  },
+  {
+   "pattern": "^a\\w$",
+   "tokens": [
+    "\\w"
+   ]
+  },
+  {
+   "pattern": "^a\\x$",
+   "tokens": [
+    "\\x"
+   ]
+  },
+  {
+   "pattern": "^a\\y$",
+   "tokens": [
+    "\\y"
+   ]
+  },
+  {
+   "pattern": "^a\\z$",
+   "tokens": [
+    "\\z"
+   ]
+  },
+  {
+   "pattern": "^a\\A$",
+   "tokens": [
+    "\\A"
+   ]
+  },
+  {
+   "pattern": "^a\\B$",
+   "tokens": [
+    "\\B"
+   ]
+  },
+  {
+   "pattern": "^a\\C$",
+   "tokens": [
+    "\\C"
+   ]
+  },
+  {
+   "pattern": "^a\\E$",
+   "tokens": [
+    "\\E"
+   ]
+  },
+  {
+   "pattern": "^a\\F$",
+   "tokens": [
+    "\\F"
+   ]
+  },
+  {
+   "pattern": "^a\\G$",
+   "tokens": [
+    "\\G"
+   ]
+  },
+  {
+   "pattern": "^a\\H$",
+   "tokens": [
+    "\\H"
+   ]
+  },
+  {
+   "pattern": "^a\\I$",
+   "tokens": [
+    "\\I"
+   ]
+  },
+  {
+   "pattern": "^a\\J$",
+   "tokens": [
+    "\\J"
+   ]
+  },
+  {
+   "pattern": "^a\\K$",
+   "tokens": [
+    "\\K"
+   ]
+  },
+  {
+   "pattern": "^a\\L$",
+   "tokens": [
+    "\\L"
+   ]
+  },
+  {
+   "pattern": "^a\\M$",
+   "tokens": [
+    "\\M"
+   ]
+  },
+  {
+   "pattern": "^a\\N$",
+   "tokens": [
+    "\\N"
+   ]
+  },
+  {
+   "pattern": "^a\\O$",
+   "tokens": [
+    "\\O"
+   ]
+  },
+  {
+   "pattern": "^a\\P$",
+   "tokens": [
+    "\\P"
+   ]
+  },
+  {
+   "pattern": "^a\\Q$",
+   "tokens": [
+    "\\Q"
+   ]
+  },
+  {
+   "pattern": "^a\\R$",
+   "tokens": [
+    "\\R"
+   ]
+  },
+  {
+   "pattern": "^a\\T$",
+   "tokens": [
+    "\\T"
+   ]
+  },
+  {
+   "pattern": "^a\\U$",
+   "tokens": [
+    "\\U"
+   ]
+  },
+  {
+   "pattern": "^a\\V$",
+   "tokens": [
+    "\\V"
+   ]
+  },
+  {
+   "pattern": "^a\\W$",
+   "tokens": [
+    "\\W"
+   ]
+  },
+  {
+   "pattern": "^a\\X$",
+   "tokens": [
+    "\\X"
+   ]
+  },
+  {
+   "pattern": "^a\\Y$",
+   "tokens": [
+    "\\Y"
+   ]
+  },
+  {
+   "pattern": "^a\\Z$",
+   "tokens": [
+    "\\Z"
+   ]
+  },
+  {
+   "pattern": "^\\xZZ$",
+   "tokens": [
+    "\\x"
+   ]
+  },
+  {
+   "pattern": "^\\u06F$",
+   "tokens": [
+    "\\u"
+   ]
+  },
+  {
+   "pattern": "^\\u{41}$",
+   "tokens": [
+    "\\u"
+   ]
+  },
+  {
+   "pattern": "^\\ی$",
+   "tokens": [
+    "\\ی"
+   ]
+  },
+  {
+   "pattern": "^\\:$",
+   "tokens": [
+    "\\:"
+   ]
+  },
+  {
+   "pattern": "^\\,$",
+   "tokens": [
+    "\\,"
+   ]
+  },
+  {
+   "pattern": "^\\ $",
+   "tokens": [
+    "\\ "
+   ]
+  },
+  {
+   "pattern": "^\\\"$",
+   "tokens": [
+    "\\\""
+   ]
+  },
+  {
+   "pattern": "^\\،$",
+   "tokens": [
+    "\\،"
+   ]
+  },
+  {
+   "pattern": "^[a[]$",
+   "tokens": [
+    "["
+   ]
+  },
+  {
+   "pattern": "^[a&&b]$",
+   "tokens": [
+    "&&"
+   ]
+  },
+  {
+   "pattern": "^[]$",
+   "tokens": [
+    "[]"
+   ]
+  },
+  {
+   "pattern": "^[^]$",
+   "tokens": [
+    "[^]"
+   ]
+  },
+  {
+   "pattern": "^[\\w]$",
+   "tokens": [
+    "\\w"
+   ]
+  },
+  {
+   "pattern": "^[\\b]$",
+   "tokens": [
+    "\\b"
+   ]
+  },
+  {
+   "pattern": "^[\\1]$",
+   "tokens": [
+    "\\1"
+   ]
+  },
+  {
+   "pattern": "^[\\r\\f]$",
+   "tokens": [
+    "\\r",
+    "\\f"
+   ]
+  },
+  {
+   "pattern": "^a]$",
+   "tokens": [
+    "]"
+   ]
+  },
+  {
+   "pattern": "^a{$",
+   "tokens": [
+    "{"
+   ]
+  },
+  {
+   "pattern": "^a}$",
+   "tokens": [
+    "}"
+   ]
+  },
+  {
+   "pattern": "^a{,3}$",
+   "tokens": [
+    "{,3}"
+   ]
+  },
+  {
+   "pattern": "^a{x}$",
+   "tokens": [
+    "{x}"
+   ]
+  },
+  {
+   "pattern": "^a{1{2}$",
+   "tokens": [
+    "{"
+   ]
+  },
+  {
+   "pattern": "^a|^b$",
+   "tokens": [
+    "^"
+   ]
+  },
+  {
+   "pattern": "^a$|b$",
+   "tokens": [
+    "$"
+   ]
+  },
+  {
+   "pattern": "^\\w+\\b\\w(?<=x)\\w$",
+   "tokens": [
+    "\\w",
+    "\\b",
+    "(?<="
+   ]
+  },
+  {
+   "pattern": "^(\\w$",
+   "tokens": [
+    "\\w"
+   ]
+  },
+  {
+   "pattern": "^*a$",
+   "tokens": [
+    "*"
+   ]
+  },
+  {
+   "pattern": "^a**$",
+   "tokens": [
+    "*"
+   ]
+  },
+  {
+   "pattern": "^a|*b$",
+   "tokens": [
+    "*"
+   ]
+  },
+  {
+   "pattern": "^(*a)$",
+   "tokens": [
+    "*"
+   ]
+  },
+  {
+   "pattern": "^(?:+a)$",
+   "tokens": [
+    "+"
+   ]
+  },
+  {
+   "pattern": "^{2}a$",
+   "tokens": [
+    "{2}"
+   ]
+  },
+  {
+   "pattern": "^a{2}{3}$",
+   "tokens": [
+    "{3}"
+   ]
+  },
+  {
+   "pattern": "^a???$",
+   "tokens": [
+    "?"
+   ]
+  },
+  {
+   "pattern": "^a*?+$",
+   "tokens": [
+    "+"
+   ]
+  },
+  {
+   "pattern": "^*?a$",
+   "tokens": [
+    "*",
+    "?"
+   ]
+  },
+  {
+   "pattern": "^a^*b$",
+   "tokens": [
+    "^",
+    "*"
+   ]
+  },
+  {
+   "pattern": "^(?<amount>a)(?<amount>b)$",
+   "tokens": [
+    "(?<amount>"
+   ]
+  },
+  {
+   "pattern": "^(?i)*a$",
+   "tokens": [
+    "(?i)",
+    "*"
+   ]
+  },
+  {
+   "pattern": "^(?>*a)$",
+   "tokens": [
+    "(?>",
+    "*"
+   ]
+  },
+  {
+   "pattern": "^\\w+$",
+   "tokens": [
+    "\\w"
+   ]
+  },
+  {
+   "pattern": "^a{x}*$",
+   "tokens": [
+    "{x}"
+   ]
+  },
+  {
+   "pattern": "^a]+$",
+   "tokens": [
+    "]"
+   ]
+  },
+  {
+   "pattern": "^[\\d-z]$",
+   "tokens": [
+    "\\d-z"
+   ]
+  },
+  {
+   "pattern": "^[a-\\d]$",
+   "tokens": [
+    "a-\\d"
+   ]
+  },
+  {
+   "pattern": "^[\\s-\\S]$",
+   "tokens": [
+    "\\s-\\S"
+   ]
+  },
+  {
+   "pattern": "^a😀$",
+   "tokens": [
+    "😀"
+   ]
+  },
+  {
+   "pattern": "^[a😀]$",
+   "tokens": [
+    "😀"
+   ]
+  },
+  {
+   "pattern": "^\\😀$",
+   "tokens": [
+    "\\😀"
+   ]
+  },
+  {
+   "pattern": "^\\uD83D\\uDE00$",
+   "tokens": [
+    "\\uD83D",
+    "\\uDE00"
+   ]
+  },
+  {
+   "pattern": "^[\\ud800-\\udbff]$",
+   "tokens": [
+    "\\ud800",
+    "\\udbff"
+   ]
+  },
+  {
+   "pattern": "^(?:(?<amount>\\d+)|x)*$",
+   "tokens": [
+    "(?<amount>"
+   ]
+  },
+  {
+   "pattern": "^((?<amount>\\d)a)+$",
+   "tokens": [
+    "(?<amount>"
+   ]
+  },
+  {
+   "pattern": "^(?:(?:(?<amount>\\d))b){2}$",
+   "tokens": [
+    "(?<amount>"
+   ]
+  },
+  {
+   "pattern": "^(?:(?<amount>\\d)){1,3}?$",
+   "tokens": [
+    "(?<amount>"
+   ]
+  },
+  {
+   "pattern": "^(?:(?<amount>\\d)){0,}$",
+   "tokens": [
+    "(?<amount>"
+   ]
+  },
+  {
+   "pattern": "^(?:(?<amount>\\d)(?<kind>x))*$",
+   "tokens": [
+    "(?<amount>",
+    "(?<kind>"
+   ]
+  },
+  {
+   "pattern": "^(?:(?<amount>\\d)\\w)*$",
+   "tokens": [
+    "(?<amount>",
+    "\\w"
+   ]
+  },
+  {
+   "pattern": "^[\\d-z]\\w\\d-z$",
+   "tokens": [
+    "\\d-z",
+    "\\w"
+   ]
+  }
+ ],
+ "regex": [
+  {
+   "pattern": "^(a$",
+   "why": "unclosed group"
+  },
+  {
+   "pattern": "^a)$",
+   "why": "unmatched )"
+  },
+  {
+   "pattern": "^[a$",
+   "why": "unterminated class"
+  },
+  {
+   "pattern": "^a{2,1}$",
+   "why": "numbers out of order"
+  },
+  {
+   "pattern": "^[z-a]$",
+   "why": "range out of order"
+  },
+  {
+   "pattern": "^a\\",
+   "why": "\\ at end of pattern"
+  },
+  {
+   "pattern": "^(?:a$",
+   "why": "unclosed non-capturing group"
+  }
+ ]
+}

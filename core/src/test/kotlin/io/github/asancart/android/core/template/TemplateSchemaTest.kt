@@ -52,6 +52,31 @@ class TemplateSchemaTest {
         assertTrue(Code.REGEX in codes(with("pattern" to JsonPrimitive("^(?<amount>[0-9]+$"))))
     }
 
+    private fun errors(o: JsonElement): List<TemplateSchema.Error> = (TemplateSchema.validate(o) as? TemplateSchema.Result.Invalid)?.errors.orEmpty()
+
+    @Test
+    fun `a token outside the regex dialect is code dialect with the token, and the pattern isn't compiled (REQ-DEV-043)`() {
+        val e = errors(with("pattern" to JsonPrimitive("^(?<amount>\\w+)\\b(?<=x)$")))
+        assertEquals(
+            listOf(TemplateSchema.Error("pattern", Code.DIALECT, "\\w"), TemplateSchema.Error("pattern", Code.DIALECT, "\\b"), TemplateSchema.Error("pattern", Code.DIALECT, "(?<=")),
+            e.filter { it.code == Code.DIALECT },
+        )
+        // The unclosed group would be code regex; the dialect check comes first and nothing is compiled.
+        assertEquals(listOf(Code.DIALECT), codes(with("pattern" to JsonPrimitive("^((?<amount>\\d+)\\p{Nd}$"))).filter { it == Code.DIALECT || it == Code.REGEX })
+        // Inside the dialect but not compiling: code regex, as before.
+        assertEquals(listOf(Code.REGEX), codes(with("pattern" to JsonPrimitive("^((?<amount>\\d+)$"))).filter { it == Code.DIALECT || it == Code.REGEX })
+        // The other pattern checks still run next to it.
+        assertTrue(Code.AMOUNT_GROUP in codes(with("pattern" to JsonPrimitive("^\\w+$"))))
+        assertEquals("dialect", Code.DIALECT.wire)
+        assertEquals("regex", Code.REGEX.wire)
+    }
+
+    @Test
+    fun `every pattern construct of the dialect validates`() {
+        val p = "^(?![\\s\\S]*\\+\\d)\\u062D\\x41[^\\d\\n]{1,3}?(?:a|b)*(?<account>\\d+)\\.\\/\\-(?=\\S)(?<kind>\\D+?)(?<amount>[\\d,]+)\\t?.$"
+        assertEquals(emptyList(), codes(with("pattern" to JsonPrimitive(p), "flags" to JsonPrimitive("is"))))
+    }
+
     @Test
     fun `an amount group is needed unless the template only ignores`() {
         assertTrue(Code.AMOUNT_GROUP in codes(with("pattern" to JsonPrimitive("^\u0648\u0627\u0631\u06CC\u0632[0-9,]+$"), "direction" to js("""{"mode":"fixed","value":"in"}"""))))

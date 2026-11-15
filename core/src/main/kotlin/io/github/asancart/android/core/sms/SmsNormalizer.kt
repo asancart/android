@@ -33,25 +33,49 @@ object Normalizer : SmsNormalizer {
         return s.substring(start, end)
     }
 
-    /** CR, CRLF, U+2028, U+2029 → `\n`. */
-    fun unifyLineBreaks(s: String): String {
-        if (s.none { it == '\r' || it == '\u2028' || it == '\u2029' }) return s
+    /**
+     * REQ-DEV-050's first steps, always applied whatever the flags (T2.15): the line breaks CR,
+     * CRLF, U+0085, U+2028 and U+2029 become `\n`; the whitespace JavaScript, the JDK and ICU class
+     * differently (U+000B, U+000C, U+00A0, U+1680, U+2000–U+200A, U+202F, U+205F, U+3000) becomes a
+     * space; U+FEFF is removed; a character outside the Basic Multilingual Plane (a surrogate pair)
+     * or a lone surrogate becomes U+FFFD (T2.16). Afterwards space, tab and `\n` are the only
+     * whitespace, `\n` the only line break and every character one UTF-16 unit, so REQ-DEV-041's
+     * `\s`, `.`, `\D`, `\S` and `[^…]` mean the same in every engine.
+     */
+    fun alwaysOn(s: String): String {
+        if (s.none(::isAlwaysOnChar)) return s
         val out = StringBuilder(s.length)
         var i = 0
         while (i < s.length) {
-            val c = s[i]
-            when {
-                c == '\r' && i + 1 < s.length && s[i + 1] == '\n' -> {
+            when (val c = s[i]) {
+                '\r' -> {
                     out.append('\n')
-                    i++
+                    if (i + 1 < s.length && s[i + 1] == '\n') i++
                 }
-                c == '\r' || c == '\u2028' || c == '\u2029' -> out.append('\n')
-                else -> out.append(c)
+                '\u0085', '\u2028', '\u2029' -> out.append('\n')
+                '\uFEFF' -> Unit
+                else -> when {
+                    isOddSpace(c) -> out.append(' ')
+                    Character.isSurrogate(c) -> {
+                        out.append('\uFFFD')
+                        if (Character.isHighSurrogate(c) && i + 1 < s.length && Character.isLowSurrogate(s[i + 1])) i++
+                    }
+                    else -> out.append(c)
+                }
             }
             i++
         }
         return out.toString()
     }
+
+    /** Whitespace REQ-DEV-050 always turns into a space. */
+    private fun isOddSpace(c: Char): Boolean = when (c) {
+        '\u000B', '\u000C', '\u00A0', '\u1680', '\u202F', '\u205F', '\u3000' -> true
+        else -> c in '\u2000'..'\u200A'
+    }
+
+    private fun isAlwaysOnChar(c: Char): Boolean =
+        c == '\r' || c == '\u0085' || c == '\u2028' || c == '\u2029' || c == '\uFEFF' || isOddSpace(c) || Character.isSurrogate(c)
 
     /** Arabic ي ى → Persian ی; Arabic ك → Persian ک. Also used on keyword lists (REQ-DEV-055). */
     fun normalizeLetters(s: String): String = map(s) {
@@ -78,22 +102,20 @@ object Normalizer : SmsNormalizer {
             '\u066C' -> ','
             '\u066B' -> '.'
             in '\uFF01'..'\uFF5E' -> (it.code - 0xFEE0).toChar()
-            '\u00A0', '\u2007', '\u202F' -> ' '
             else -> it
         }
     }
 
     private val SPACE_RUN = Regex("[ \t]+")
 
-    /** Per line: runs of spaces and tabs → one space, then trim. */
+    /** Per line: runs of spaces and tabs → one space, then trim. Line breaks are `\n` already. */
     private fun whitespace(s: String): String =
-        unifyLineBreaks(s).split('\n').joinToString("\n") { line -> jsTrim(line.replace(SPACE_RUN, " ")) }
+        s.split('\n').joinToString("\n") { line -> jsTrim(line.replace(SPACE_RUN, " ")) }
 
-    private fun dropBlankLines(s: String): String =
-        unifyLineBreaks(s).split('\n').filter { jsTrim(it).isNotEmpty() }.joinToString("\n")
+    private fun dropBlankLines(s: String): String = s.split('\n').filter { jsTrim(it).isNotEmpty() }.joinToString("\n")
 
     override fun normalizeText(text: String, flags: NormalizeFlags): String {
-        var s = unifyLineBreaks(text)
+        var s = alwaysOn(text)
         if (flags.bidiControls) s = removeBidi(s)
         if (flags.arabicLetters) s = normalizeLetters(s)
         if (flags.digits) s = normalizeDigits(s)

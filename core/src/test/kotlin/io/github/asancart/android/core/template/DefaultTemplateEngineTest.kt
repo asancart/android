@@ -84,4 +84,35 @@ class DefaultTemplateEngineTest {
         val r = engine.run(t(pattern = "^(?<kind>\\S+) (?<amount>\\d+)(?<reference>\\d*)$"), "\u0648\u0627\u0631\u06CC\u0632 5")
         assertNull(r.reference)
     }
+
+    private val noDigits = NormalizeFlags(digits = false)
+
+    @Test
+    fun `with digit normalization off a Persian or Devanagari digit is not backslash d (REQ-DEV-041)`() {
+        val amount = t(pattern = "^\\u0645\\u0628\\u0644\\u063A (?<amount>\\d+)$", direction = Direction.Fixed(deposit = true)).copy(normalize = noDigits)
+        assertEquals(TemplateStatus.DEPOSIT, engine.run(amount, "\u0645\u0628\u0644\u063A 500").status)
+        assertEquals(TemplateStatus.NO_MATCH, engine.run(amount, "\u0645\u0628\u0644\u063A \u06F5\u06F0\u06F0").status)
+        assertEquals(TemplateStatus.NO_MATCH, engine.run(amount, "\u0645\u0628\u0644\u063A \u0665\u0660\u0660").status)
+        // No step turns Devanagari digits into Latin ones, so they are never backslash d.
+        assertEquals(TemplateStatus.NO_MATCH, engine.run(amount.copy(normalize = NormalizeFlags()), "\u0645\u0628\u0644\u063A \u096B\u0966\u0966").status)
+        // With digits on (the default) the Persian amount is Latin before matching.
+        assertEquals(500L, engine.run(amount.copy(normalize = NormalizeFlags()), "\u0645\u0628\u0644\u063A \u06F5\u06F0\u06F0").amount)
+    }
+
+    @Test
+    fun `a pattern outside the dialect is INVALID_TEMPLATE, with the tokens as detail`() {
+        val r = engine.run(t(pattern = "^(?<kind>\\w+) (?<amount>\\d+)$"), "\u0648\u0627\u0631\u06CC\u0632 5")
+        assertEquals(TemplateStatus.INVALID_TEMPLATE, r.status)
+        assertEquals("outside the regex dialect: \\w", r.detail)
+    }
+
+    @Test
+    fun `the always-on whitespace steps apply even with every flag off (REQ-DEV-050)`() {
+        val off = NormalizeFlags(bidiControls = false, arabicLetters = false, digits = false, punctuation = false, whitespace = false, dropBlankLines = false)
+        val p = t(pattern = "^(?<kind>\\S+) (?<amount>\\d+)\\n.$", direction = Direction.Keyword(listOf("\u0648\u0627\u0631\u06CC\u0632"), emptyList())).copy(normalize = off)
+        assertEquals(TemplateStatus.DEPOSIT, engine.run(p, "\u0648\u0627\u0631\u06CC\u0632\u00A0500\r\nx").status)
+        assertEquals(TemplateStatus.DEPOSIT, engine.run(p, "\uFEFF\u0648\u0627\u0631\u06CC\u0632\u2007500\u2028x").status)
+        // `.` doesn't match a line break of any kind: they are all `\n` by then.
+        assertEquals(TemplateStatus.NO_MATCH, engine.run(p, "\u0648\u0627\u0631\u06CC\u0632 500\n\u0085").status)
+    }
 }
