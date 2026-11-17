@@ -122,19 +122,23 @@ class DefaultTemplateEngine : TemplateEngine {
     )
 
     companion object {
-        /** JavaScript `Number.MAX_SAFE_INTEGER`, the reference engine's limit. */
-        private const val MAX_SAFE_INTEGER = 9_007_199_254_740_991L
+        /** 2^53 − 1, JavaScript `Number.MAX_SAFE_INTEGER`: the most rials an amount may be (REQ-DEV-054). */
+        const val MAX_RIALS = 9_007_199_254_740_991L
 
         /**
          * REQ-DEV-054: digits to Latin; `,`, U+066C and whitespace removed; must be `^\d+$` and
-         * positive; toman × 10. Null when it isn't a positive integer.
+         * positive; toman × 10. The rials, the exact product after the toman step, must be at most
+         * 2^53 − 1 (T2.19): `9007199254740991` toman is refused, as it is in the admin engine, which
+         * can't hold its product exactly. Null (BAD_AMOUNT) otherwise.
          */
         fun parseAmount(raw: String, unit: AmountUnit = AmountUnit.RIAL): Long? {
             val digits = Normalizer.normalizeDigits(raw).filterNot { it == ',' || it == '\u066C' || Normalizer.isJsWhitespace(it) }
             if (digits.isEmpty() || digits.any { it !in '0'..'9' }) return null
+            // Above 16 digits the value is above the bound; at most 16, × 10 still fits in a Long.
             val n = digits.trimStart('0').let { if (it.length > 16) return null else it.ifEmpty { "0" }.toLong() }
-            if (n <= 0 || n > MAX_SAFE_INTEGER) return null
-            return n * unit.toRials
+            if (n <= 0) return null
+            val rials = n * unit.toRials
+            return if (rials > MAX_RIALS) null else rials
         }
     }
 }

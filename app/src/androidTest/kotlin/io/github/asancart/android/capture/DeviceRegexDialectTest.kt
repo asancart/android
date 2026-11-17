@@ -19,9 +19,10 @@ import org.junit.runner.RunWith
 import java.util.regex.Pattern
 
 /**
- * T4.17: REQ-DEV-041's regex dialect on the device's own `java.util.regex`, which is ICU on
- * Android. Every allowed construct, refused token and compile error of the shared case file, and
- * `\d` as `[0-9]` where ICU's own `\d` is every Unicode digit. No private data: runs in CI.
+ * T4.17, T4.18-T4.20: REQ-DEV-041's regex dialect on the device's own `java.util.regex`, which is
+ * ICU on Android. Every allowed construct (with its captures, the empty-match and lookahead rules'
+ * allowed examples included), refused token and compile error of the shared case file, and `\d` as
+ * `[0-9]` where ICU's own `\d` is every Unicode digit. No private data: runs in CI.
  */
 @RunWith(AndroidJUnit4::class)
 class DeviceRegexDialectTest {
@@ -30,7 +31,7 @@ class DeviceRegexDialectTest {
         val report = RegexDialectCases().run()
         Log.i("AsancartDialect", "API ${Build.VERSION.SDK_INT}: $report")
         assertTrue(report.toString(), report.failures.isEmpty())
-        assertTrue(report.toString(), report.allowed >= 69 && report.refused >= 134 && report.regex >= 7)
+        assertTrue(report.toString(), report.allowed >= 103 && report.refused >= 220 && report.regex >= 7)
     }
 
     @Test

@@ -9,8 +9,14 @@ import java.util.regex.PatternSyntaxException
  * what it means in the admin engine (JavaScript `RegExp`, no `u` flag) and on the server (JDK).
  *
  * The pattern is checked against the dialect before anything is compiled: every token outside it
- * is reported in a [DialectViolation] (code `dialect`, REQ-DEV-043). Inside the dialect, the
- * pattern is rewritten for `java.util.regex`, which on Android is ICU and runs from API 24:
+ * is reported in a [DialectViolation] (code `dialect`, REQ-DEV-043). Besides the constructs the
+ * engines refuse or read differently, the check keeps a stack of open groups to refuse a named
+ * group inside a group that can repeat (T3.56) or inside a lookahead (T2.23), and a quantifier
+ * other than `{1}`, `{1,1}`, `{0}` or `{0,0}` on a group that can match the empty string (T2.32,
+ * which replaces T2.19's empty-iteration rule; bounds read as numbers, T2.34).
+ *
+ * Inside the dialect, the pattern is rewritten for `java.util.regex`, which on Android is ICU and
+ * runs from API 24:
  * - `\d` becomes `[0-9]` (`0-9` inside a class) and `\D` `[^0-9]`: ICU's `\d` is every Unicode
  *   digit, so a Persian or Devanagari digit would match it (REQ-APP-016). `\s` becomes the
  *   dialect's ASCII class `[ \t\n\x0B\f\r]` and `\S` its complement; after REQ-DEV-050's always-on
@@ -21,6 +27,9 @@ import java.util.regex.PatternSyntaxException
  *   set syntax (`[:…:]`, `{…}`, `&`, ignored white space) never applies inside a class. A `-`
  *   that isn't a range is a literal, as in JavaScript.
  * - `.` excludes only `\n` (UNIX_LINES): JavaScript's `.` on normalized text.
+ * - A quantified lookahead is wrapped in a non-capturing group, `(?=\d){1}` to `(?:(?=\d)){1}`:
+ *   ICU refuses a quantifier right after a lookahead, JavaScript and the JDK take it, and the
+ *   dialect allows `{1}`, `{1,1}`, `{0}` and `{0,0}` there (T2.32).
  * - Flag `i` folds ASCII letters only (T2.18): with it, an ASCII letter outside a class becomes a
  *   class of both cases (`k` to `[kK]`) and a class gets the other case of every ASCII letter it
  *   holds (`[a-f]` to `[a-fA-F]`, `[^k]` to `[^kK]`). Nothing is compiled case-insensitive, so
@@ -100,20 +109,53 @@ internal class DialectTranslator(private val src: String, private val foldAscii:
     /** A refused token and where it starts. */
     private class Token(val at: Int, val text: String)
 
-    /** An open group and the named group openers inside it, at any depth (T3.56). */
-    private class Frame(val named: Token?) {
+    /**
+     * An open group (T3.56, T2.23, T2.32): its own named opener, the named group openers inside it
+     * at any depth, whether it is a lookahead, and what REQ-DEV-041 needs to know whether it can
+     * match the empty string: whether it is zero-width (a lookahead or lookbehind), whether a
+     * finished alternative can, and, for each item of the current alternative, whether it can.
+     * A lookahead also keeps where its opener starts in the rewrite ([outStart]).
+     */
+    private class Frame(val named: Token?, val lookahead: Boolean = false, val zeroWidth: Boolean = false, val outStart: Int = -1) {
         val inner = ArrayList<Token>()
+        val items = ArrayList<Boolean>()
+        var alternativeCanBeEmpty = false
+
+        /** `|`: the current alternative is finished. */
+        fun alternative() {
+            if (items.all { it }) alternativeCanBeEmpty = true
+            items.clear()
+        }
+
+        /**
+         * REQ-DEV-041 "can match the empty string" (T2.32): a lookahead or lookbehind can; any other
+         * group can when any alternative can; an alternative when every item in it can, so an empty
+         * alternative can.
+         */
+        fun canBeEmpty(): Boolean = zeroWidth || alternativeCanBeEmpty || items.all { it }
     }
 
+    /** Open groups, innermost last. */
     private val open = ArrayList<Frame>()
 
-    /** Named group openers inside the group whose `)` came last, until another token comes. */
-    private var justClosed: List<Token>? = null
+    /** The pattern outside every group: only its items are kept, since nothing quantifies it. */
+    private val root = Frame(null)
+
+    /** The innermost open group, or the pattern outside every group. */
+    private fun current(): Frame = open.lastOrNull() ?: root
+
+    /**
+     * An item of the current alternative that can't match the empty string: a character, `.`, an
+     * escape or a class, and a refused escape, `{…}`, `}` or `]`, which count as characters (T2.32).
+     * Anchors and inline flags that close at once, `(?i)`, are zero-width and add no item.
+     */
+    private fun item() {
+        current().items += false
+    }
 
     fun translate(): Result {
         while (i < src.length) {
             val c = src[i]
-            val closing = c == ')'
             when (c) {
                 '\\' -> {
                     when (val e = readEscape()) {
@@ -121,13 +163,23 @@ internal class DialectTranslator(private val src: String, private val foldAscii:
                         is Escape.Shorthand -> out.append(e.outside)
                         is Escape.Refused -> Unit
                     }
+                    item()
                     quantifiable = true
                 }
-                '[' -> charClass()
+                '[' -> {
+                    charClass()
+                    item()
+                }
                 '(' -> group()
                 ')' -> closeGroup()
-                '|' -> emit("|", quantifiable = false)
-                '.' -> emit(".", quantifiable = true)
+                '|' -> {
+                    current().alternative()
+                    emit("|", quantifiable = false)
+                }
+                '.' -> {
+                    emit(".", quantifiable = true)
+                    item()
+                }
                 '^', '$' -> {
                     // Only as the first and the last character; after either, nothing to repeat.
                     if (i == (if (c == '^') 0 else src.length - 1)) emit(c.toString(), quantifiable = false) else refuse(c.toString())
@@ -143,13 +195,15 @@ internal class DialectTranslator(private val src: String, private val foldAscii:
                         var j = i + 1
                         while (j < src.length && src[j] != '{' && src[j] != '}') j++
                         refuse(if (j < src.length && src[j] == '}') src.substring(i, j + 1) else "{")
+                        item()
                     }
                 }
-                '}', ']' -> refuse(c.toString())
+                '}', ']' -> {
+                    refuse(c.toString())
+                    item()
+                }
                 else -> literal()
             }
-            // Only a quantifier right after a group's `)` repeats that group.
-            if (!closing) justClosed = null
         }
         val violations = found.sortedBy { it.at }.map { it.text }.distinct()
         return Result(out.toString(), groups, violations, error)
@@ -190,6 +244,7 @@ internal class DialectTranslator(private val src: String, private val foldAscii:
             i++
             quantifiable = true
         }
+        item()
     }
 
     /** A character outside the BMP (a surrogate pair) or a lone surrogate at [at]: itself. */
@@ -216,6 +271,34 @@ internal class DialectTranslator(private val src: String, private val foldAscii:
         else -> q.substring(q.lastIndexOfAny(charArrayOf('{', ',')) + 1, q.length - 1).trimStart('0').let { it.length > 1 || (it.isNotEmpty() && it[0] > '1') }
     }
 
+    /**
+     * Exactly once or exactly never, the only quantifiers a group that can match the empty string
+     * takes (T2.32): `{1}`, `{1,1}`, `{0}`, `{0,0}`. Bounds are read as numbers: `{01}` is `{1}` and
+     * `{0,00}` is `{0,0}` (T2.34).
+     */
+    private fun onceOrNever(q: String): Boolean {
+        if (!q.startsWith("{")) return false
+        val bounds = q.substring(1, q.length - 1)
+        val comma = bounds.indexOf(',')
+        val min = (if (comma < 0) bounds else bounds.substring(0, comma)).trimStart('0')
+        if (comma >= 0) {
+            val max = bounds.substring(comma + 1)
+            if (max.isEmpty() || max.trimStart('0') != min) return false
+        }
+        return min.isEmpty() || min == "1"
+    }
+
+    /** The quantifier's minimum is 0: `?` `*` `{0}` `{0,}` `{0,m}`, bounds read as numbers. */
+    private fun minimumZero(q: String): Boolean =
+        if (q.startsWith("{")) q.substring(1).takeWhile { it in '0'..'9' }.all { it == '0' } else q != "+"
+
+    /** The quantifier at [at] (without a lazy or possessive mark), or null. */
+    private fun quantifierAt(at: Int): String? = when (src.getOrNull(at)) {
+        '*', '+', '?' -> src.substring(at, at + 1)
+        '{' -> braceQuantifierLength(at).takeIf { it > 0 }?.let { src.substring(at, at + it) }
+        else -> null
+    }
+
     /** A quantifier of [len] characters at [i], optionally lazy. */
     private fun quantifier(len: Int) {
         val q = src.substring(i, i + len)
@@ -224,13 +307,12 @@ internal class DialectTranslator(private val src: String, private val foldAscii:
             // after it is a quantifier of its own, with nothing to repeat either.
             refuse(q)
             quantifiable = false
-            justClosed = null
             return
         }
-        // T3.56: a group that can repeat may not hold a named group (JavaScript clears its captures
-        // at each repetition, the JDK and ICU keep the last one). The group's own name may repeat.
-        if (repeats(q)) justClosed?.forEach { report(it.at, it.text) }
-        justClosed = null
+        // T2.32: a quantified item can match the empty string when its minimum is 0, else when the
+        // item can. (The group rules, T3.56 and T2.32, are checked at the group's `)`.)
+        val items = current().items
+        if (items.isNotEmpty()) items[items.lastIndex] = minimumZero(q) || items.last()
         out.append(q)
         val at = i
         i += len
@@ -248,15 +330,21 @@ internal class DialectTranslator(private val src: String, private val foldAscii:
     private fun group() {
         val rest = src.substring(i, minOf(i + 4, src.length))
         when {
-            rest.startsWith("(?:") || rest.startsWith("(?=") || rest.startsWith("(?!") -> {
-                emit(rest.substring(0, 3), quantifiable = false)
+            rest.startsWith("(?:") -> {
+                emit("(?:", quantifiable = false)
                 open += Frame(null)
+            }
+            rest.startsWith("(?=") || rest.startsWith("(?!") -> {
+                val at = out.length
+                emit(rest.substring(0, 3), quantifiable = false)
+                open += Frame(null, lookahead = true, zeroWidth = true, outStart = at)
             }
             rest == "(?<=" || rest == "(?<!" || rest.startsWith("(?>") -> {
                 val token = if (rest.startsWith("(?>")) "(?>" else rest
                 refuse(token)
                 out.append('(')
-                open += Frame(null)
+                // A lookbehind is zero-width (T2.32); an atomic group is not.
+                open += Frame(null, zeroWidth = token != "(?>")
             }
             rest.startsWith("(?<") -> namedGroup()
             rest.startsWith("(?") -> {
@@ -266,6 +354,7 @@ internal class DialectTranslator(private val src: String, private val foldAscii:
                 val flags = j > i + 2 && j < src.length && (src[j] == ')' || src[j] == ':')
                 val token = if (flags) src.substring(i, j + 1) else src.substring(i, minOf(i + 3, src.length))
                 refuse(token)
+                // Inline flags that close at once, `(?i)`, open no group and add no item (zero-width).
                 if (!token.endsWith(")")) {
                     out.append('(')
                     open += Frame(null)
@@ -282,11 +371,13 @@ internal class DialectTranslator(private val src: String, private val foldAscii:
         quantifiable = false
     }
 
-    /** `(?<name>`: a name of ASCII letters and digits, a letter first, used once. */
+    /**
+     * `(?<name>`: a name of ASCII letters and digits, a letter first, used once, never inside a
+     * lookahead (T2.23). The opener runs to the next `>`, else it is `(?<` (as the admin engine).
+     */
     private fun namedGroup() {
-        var j = i + 3
-        while (j < src.length && src[j] != '>' && src[j] != ')') j++
-        if (j >= src.length || src[j] != '>') {
+        val j = src.indexOf('>', i + 3)
+        if (j < 0) {
             refuse("(?<")
             out.append('(')
             open += Frame(null)
@@ -300,16 +391,45 @@ internal class DialectTranslator(private val src: String, private val foldAscii:
         } else {
             groupCount++
             if (groups.containsKey(name)) report(i, opener.text) else groups[name] = groupCount
+            // T2.23: when the match backtracks past a lookahead, the JDK keeps a capture made inside
+            // it and JavaScript drops it. Found at the opener; an opener several rules refuse is one token.
+            if (open.any { it.lookahead }) report(i, opener.text)
         }
         out.append('(')
         i = j + 1
         open += Frame(opener)
     }
 
+    /** A group's `)`: the group rules look at the quantifier right after it, if any. */
     private fun closeGroup() {
         emit(")", quantifiable = true)
-        val f = open.removeLastOrNull() ?: return // an unmatched `)`: the JDK refuses it (regex)
-        justClosed = f.inner.toList()
+        val f = open.removeLastOrNull()
+        if (f == null) {
+            item() // an unmatched `)`: the JDK refuses it (regex)
+            return
+        }
+        val q = quantifierAt(i)
+        val canBeEmpty = f.canBeEmpty()
+        // T3.56: a group that can repeat may not hold a named group (JavaScript clears its captures
+        // at each repetition, the JDK and ICU keep the last one). The group's own name may repeat.
+        // Found here, each in its opener's place (T2.17).
+        if (q != null && repeats(q)) f.inner.forEach { report(it.at, it.text) }
+        // T2.32: a group that can match the empty string takes only {1}, {1,1}, {0} or {0,0}, lazy
+        // or not: JavaScript drops an iteration that matched nothing, the JDK keeps it, which moves
+        // captures. The quantifier as written, a lazy `?` included, in its own place; a possessive
+        // one is refused as possessive only ([quantifier]).
+        if (q != null && canBeEmpty && !onceOrNever(q)) {
+            val after = src.getOrNull(i + q.length)
+            if (after != '+') report(i, if (after == '?') "$q?" else q)
+        }
+        // ICU refuses a quantifier on a lookahead (`(?=\d){1}`: "Syntax error in regexp pattern"),
+        // which JavaScript and the JDK take, and the dialect allows {1}, {1,1}, {0} and {0,0} on one.
+        // A non-capturing group around it means the same and takes the quantifier: `(?:(?=\d)){1}`.
+        if (q != null && f.lookahead) {
+            out.insert(f.outStart, "(?:")
+            out.append(')')
+        }
+        current().items += canBeEmpty
         open.lastOrNull()?.inner?.let { parent ->
             parent += f.inner
             f.named?.let { parent += it }

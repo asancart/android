@@ -112,6 +112,28 @@ class NormalizerTest {
     }
 
     @Test
+    fun `text senders lowercase A-Z only, every other character stays (REQ-DEV-051, T2-23)`() {
+        // Kotlin lowercase() gives a final sigma here (aوς); JavaScript and the doc keep Σ.
+        assertEquals("aوΣ", Normalizer.normalizeSender("aوΣ"))
+        assertEquals("ΣΑΣ", Normalizer.normalizeSender("ΣΑΣ"))
+        assertEquals("İstanbul", Normalizer.normalizeSender("İstanbul"))
+        assertEquals("ÀbÉ", Normalizer.normalizeSender("ÀB É"))
+        assertEquals("bankmellat", Normalizer.normalizeSender("Bank Mellat"))
+        assertEquals("b.pasargad", Normalizer.normalizeSender("B.Pasargad"))
+        assertEquals("khmbank", Normalizer.normalizeSender("KH M BANK"))
+        assertEquals("abcxyz@[`{", Normalizer.lowercaseAscii("ABCXYZ@[`{"))
+        assertTrue(!Normalizer.senderMatches(listOf("aσ"), "AΣ"))
+    }
+
+    @Test
+    fun `sender step 1 removes exactly JavaScript's whitespace set (REQ-DEV-051, T2-23)`() {
+        val js = listOf('\t', '\n', '\u000B', '\u000C', '\r', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '　', '﻿')
+        for (c in js) assertEquals("ab", Normalizer.normalizeSender("A${c}b"), "U+%04X".format(c.code))
+        // Not JavaScript's \s, so kept: Java's isWhitespace takes U+001C..U+001F; zero-width space and U+0085 aren't \s.
+        for (c in listOf('\u001C', '\u001F', '​', '\u0085', '᠎')) assertEquals("a${c}b", Normalizer.normalizeSender("A${c}b"), "U+%04X".format(c.code))
+    }
+
+    @Test
     fun `amounts strip separators, reject non-integers and convert toman`() {
         assertEquals(2_750_000L, DefaultTemplateEngine.parseAmount("2,750,000"))
         assertEquals(17_280_000L, DefaultTemplateEngine.parseAmount("17\u066C280\u066C000"))
