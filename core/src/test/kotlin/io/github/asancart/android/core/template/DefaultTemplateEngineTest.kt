@@ -115,4 +115,43 @@ class DefaultTemplateEngineTest {
         // `.` doesn't match a line break of any kind: they are all `\n` by then.
         assertEquals(TemplateStatus.NO_MATCH, engine.run(p, "\u0648\u0627\u0631\u06CC\u0632 500\n\u0085").status)
     }
+
+    private fun toman(pattern: String = "^(?<amount>[\\d,]+)$") = ParserTemplate(
+        name = "x",
+        senderPatterns = listOf("700717"),
+        pattern = pattern,
+        direction = Direction.Fixed(deposit = true),
+        priority = 1,
+        amountUnit = AmountUnit.TOMAN,
+    )
+
+    @Test
+    fun `REQ-DEV-054 - the rials after the toman step are at most 2^53 - 1, the exact product (T2-19)`() {
+        assertEquals(9_007_199_254_740_991L, DefaultTemplateEngine.parseAmount("9007199254740991"))
+        assertEquals(null, DefaultTemplateEngine.parseAmount("9007199254740992"))
+        assertEquals(9_007_199_254_740_990L, DefaultTemplateEngine.parseAmount("900719925474099", AmountUnit.TOMAN))
+        assertEquals(null, DefaultTemplateEngine.parseAmount("900719925474100", AmountUnit.TOMAN))
+        // The admin engine once made this 90071992547409900 rials (digits lost) and the server 90071992547409910.
+        assertEquals(null, DefaultTemplateEngine.parseAmount("9007199254740991", AmountUnit.TOMAN))
+        assertEquals(null, DefaultTemplateEngine.parseAmount("99999999999999999999999", AmountUnit.TOMAN))
+        assertEquals(null, DefaultTemplateEngine.parseAmount("9999999999999999", AmountUnit.TOMAN)) // 16 digits, × 10 in a Long
+        assertEquals(9_007_199_254_740_990L, DefaultTemplateEngine.parseAmount("000900,719,925,474,099", AmountUnit.TOMAN))
+        assertEquals(50_000L, DefaultTemplateEngine.parseAmount("5,000", AmountUnit.TOMAN))
+        assertEquals(DefaultTemplateEngine.MAX_RIALS, (1L shl 53) - 1)
+    }
+
+    @Test
+    fun `REQ-DEV-054 - a template run gives BAD_AMOUNT above the bound and DEPOSIT at it`() {
+        val bad = engine.run(toman(), "900719925474100")
+        assertEquals(TemplateStatus.BAD_AMOUNT, bad.status)
+        assertEquals(true, bad.matched)
+        assertEquals(null, bad.direction)
+        assertEquals(null, bad.amount)
+        val ok = engine.run(toman(), "900719925474099")
+        assertEquals(TemplateStatus.DEPOSIT, ok.status)
+        assertEquals(9_007_199_254_740_990L, ok.amount)
+        val rial = toman().copy(amountUnit = AmountUnit.RIAL)
+        assertEquals(TemplateStatus.DEPOSIT, engine.run(rial, "9,007,199,254,740,991").status)
+        assertEquals(TemplateStatus.BAD_AMOUNT, engine.run(rial, "9,007,199,254,740,992").status)
+    }
 }
