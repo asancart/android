@@ -20,7 +20,7 @@ class PortableRegexTest {
         val report = RegexDialectCases().run()
         println(report)
         assertTrue(report.failures.isEmpty(), report.toString())
-        assertTrue(report.allowed >= 106 && report.refused >= 229 && report.regex >= 7, report.toString())
+        assertTrue(report.allowed >= 107 && report.refused >= 239 && report.regex >= 7, report.toString())
     }
 
     @Test
@@ -119,8 +119,12 @@ class PortableRegexTest {
             assertEquals(listOf("(?<amount>"), PortableRegex.dialectViolations("^(?:x(?<amount>\\d))$q$"), q)
             assertEquals(listOf("(?<amount>"), PortableRegex.dialectViolations("^(?:((?:(?<amount>\\d)))y)$q$"), q)
         }
-        for (q in listOf("?", "??", "{0}", "{1}", "{0,1}", "{1,1}")) {
+        for (q in listOf("?", "??", "{0}", "{0,1}")) {
             assertEquals(emptyList(), PortableRegex.dialectViolations("^(?:x(?<amount>\\d))$q$"), q)
+        }
+        // Nor exactly once, {1} or {1,1} (T2.58).
+        for (q in listOf("{1}", "{1,1}")) {
+            assertEquals(listOf("(?<amount>"), PortableRegex.dialectViolations("^(?:x(?<amount>\\d))$q$"), q)
         }
         // The group itself may repeat; a named group after the repeated group is fine.
         assertEquals(emptyList(), PortableRegex.dialectViolations("^(?<amount>\\d)+(?:a)*(?<kind>b)$"))

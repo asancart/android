@@ -7,10 +7,11 @@ import kotlin.test.assertNotNull
 
 /**
  * REQ-DEV-041's empty-match rule (T2.32, which replaces T2.19's empty-iteration rule; bounds read as
- * numbers, T2.34), lookahead rule (T2.23) and bound rule (T2.59), as device-api.md states them. The
- * doc's examples first, then the admin engine's and the server port's own cases (frontend
- * `dialectRules.test.ts`, backend `EmptyMatchRuleTest`, `LookaheadRuleTest`, `BoundRuleTest`). The
- * shared `regex-dialect-cases.json` holds them too, for every engine, on the JVM and on ICU.
+ * numbers, T2.34), lookahead rule (T2.23), bound rule (T2.59) and exactly-once rule (T2.58), as
+ * device-api.md states them. The doc's examples first, then the admin engine's and the server
+ * port's own cases (frontend `dialectRules.test.ts`, backend `EmptyMatchRuleTest`,
+ * `LookaheadRuleTest`, `BoundRuleTest`). The shared `regex-dialect-cases.json` holds them too, for
+ * every engine, on the JVM and on ICU.
  */
 class DialectRulesTest {
     private val amount = "(?<amount>"
@@ -61,8 +62,9 @@ class DialectRulesTest {
         allowed("^(?:ref:(?<reference>\\d*))?x$", "x", "reference" to null)
         allowed("^(?:ref:(?<reference>\\d*))?x$", "ref:x", "reference" to "")
         allowed("^(?:ref:(?<reference>\\d*))?x$", "ref:7x", "reference" to "7")
-        allowed("^(?:(?<amount>\\d*)){1}$", "", "amount" to "")
-        allowed("^(?:(?<amount>\\d*)){1}$", "12", "amount" to "12")
+        // ^(?:(?<amount>\d*)){1}$, allowed here before, is refused by T2.58 (a named group inside {1}).
+        refused("^(?:(?<amount>\\d*)){1}$", amount)
+        allowed("^(?<amount>\\d*){1}$", "", "amount" to "")
         // The doc's rewrite of the newly refused ^(?:(?<amount>\d+)|)?x$.
         allowed("^(?<amount>\\d+)?x$", "x", "amount" to null)
         allowed("^(?<amount>\\d+)?x$", "12x", "amount" to "12")
@@ -76,7 +78,8 @@ class DialectRulesTest {
         }
         for (q in listOf("{1}", "{1,1}", "{0}", "{0,0}", "{1}?", "{1,1}?", "{0}?", "{0,0}?")) inside("^(?:a*)${q}x$")
         allowed("^(?<amount>\\d*){0,0}x$", "x", "amount" to null)
-        allowed("^(?:(?<amount>\\d*)){1,1}?$", "12", "amount" to "12")
+        allowed("^(?<amount>\\d*){1,1}?$", "12", "amount" to "12")
+        refused("^(?:(?<amount>\\d*)){1,1}?$", amount) // T2.58
         // A possessive quantifier is refused as possessive only.
         refused("^(?:a?)?+x$", "?+")
         refused("^(?:a?)*+x$", "*+")
@@ -91,8 +94,9 @@ class DialectRulesTest {
         allowed("^(?:\\d?){01}x$", "5x")
         refused("^(?:\\d?){0,01}x$", "{0,01}")
         refused("^(?:\\d?){02}x$", "{02}")
-        // The repeat rule (T3.56) reads them so too: {01} and {0,01} don't repeat, {02} does.
-        inside("^(?:(?<amount>\\d)x){01}$")
+        // The repeat rule (T3.56) reads them so too: {01} and {0,01} don't repeat, {02} does; {01} is
+        // exactly once, refused by T2.58.
+        refused("^(?:(?<amount>\\d)x){01}$", amount)
         inside("^(?:(?<amount>\\d)x){0,01}$")
         refused("^(?:(?<amount>\\d)x){02}$", amount)
     }
@@ -208,7 +212,7 @@ class DialectRulesTest {
 
     @Test
     fun `none of the dialect rules touches the rewrite of an allowed pattern`() {
-        assertEquals("^(?:([0-9]*)){1}$", DialectTranslator("^(?:(?<amount>\\d*)){1}$").translate().java)
+        assertEquals("^([0-9]*){1}$", DialectTranslator("^(?<amount>\\d*){1}$").translate().java)
         assertEquals("^(?=([0-9]))([0-9]+)$", DialectTranslator("^(?=(\\d))(?<amount>\\d+)$").translate().java)
     }
 
@@ -296,5 +300,46 @@ class DialectRulesTest {
         for (q in listOf("{1000}", "{0,1000}", "{1000,}", "{00000000000000000001000}", "{1,1000}?")) {
             assertNotNull(PortableRegex.compile("^a$q$").matchWhole("a".repeat(1000)), q)
         }
+    }
+
+    @Test
+    fun `exactly-once rule - the doc's refused examples, the named group's opener as token (T2-58)`() {
+        refused("^(?:(?:(?<amount>\\d\\d\\d) ریال){1}واریز|\\d+ ریال برداشت)$", amount)
+        refused("^(?:(?:(?<amount>\\d)){1}x|\\d)$", amount)
+        refused("^(?:(?<reference>(?<amount>\\d)){1}x|\\d)$", amount)
+        refused("^(?:(?:(?<amount>\\d)){1,1}x|\\d)$", amount)
+        refused("^(?:(?:(?<amount>\\d)){1}?x|\\d)$", amount)
+        refused("^(?:(?:(?<amount>\\d)){01}x|\\d)$", amount)
+        refused("^(?:(?:(?<amount>\\d+)){1}x|\\d+)$", amount)
+    }
+
+    @Test
+    fun `exactly-once rule - the doc's allowed examples give no amount on 5, as in JavaScript and ICU`() {
+        allowed("^(?:(?:(?<amount>\\d))?x|\\d)$", "5", "amount" to null)
+        allowed("^(?:(?:(?<amount>\\d)){0,1}x|\\d)$", "5", "amount" to null)
+        allowed("^(?:(?:(?<amount>\\d)){0}x|\\d)$", "5", "amount" to null)
+        // A named group itself quantified {1} stays allowed.
+        allowed("^(?:(?<amount>a){1}x|ab)$", "ab", "amount" to null)
+        allowed("^(?:(?<amount>a){1}x|ab)$", "ax", "amount" to "a")
+    }
+
+    @Test
+    fun `exactly-once rule - {1} and {1,1} by numeric value, lazy or not, at any depth, found at the quantifier`() {
+        for (q in listOf("{1}", "{1,1}", "{01}", "{001,1}", "{1,01}", "{0001,0001}", "{1}?", "{1,1}?", "{01}?")) {
+            refused("^(?:x(?<amount>\\d))$q$", amount)
+            refused("^(?:((?:(?<amount>\\d)))y)${q}z$", amount)
+        }
+        for (q in listOf("?", "??", "{0}", "{0,0}", "{0,1}", "{00}", "{0,01}", "{0}?")) inside("^(?:x(?<amount>\\d))$q$")
+        // {1,} and {1,2} can repeat (T3.56); the opener is one token either way.
+        refused("^(?:x(?<amount>\\d)){1,}$", amount)
+        refused("^(?:x(?<amount>\\d)){1,2}$", amount)
+        // Every named group inside, each in its opener's place, with other tokens in order (T2.17).
+        refused("^\\w(?:(?<account>\\d)-(?<amount>\\d)){1}\\b$", "\\w", "(?<account>", amount, "\\b")
+        // A named group after the group, or around it, is fine.
+        allowed("^(?<amount>(?:\\d){1})(?:x){1}(?<kind>y)$", "5xy", "amount" to "5", "kind" to "y")
+        // A possessive {1}+ is refused as possessive, and the named group inside it too.
+        refused("^(?:x(?<amount>\\d)){1}+$", amount, "}+")
+        // A lookahead quantified {1}: the lookahead rule and this one refuse the same opener, one token.
+        refused("^(?:(?=(?<amount>\\d+)){1})\\d+$", amount)
     }
 }

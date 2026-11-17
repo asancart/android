@@ -11,7 +11,8 @@ import java.util.regex.PatternSyntaxException
  * The pattern is checked against the dialect before anything is compiled: every token outside it
  * is reported in a [DialectViolation] (code `dialect`, REQ-DEV-043). Besides the constructs the
  * engines refuse or read differently, the check keeps a stack of open groups to refuse a named
- * group inside a group that can repeat (T3.56) or inside a lookahead (T2.23), and a quantifier
+ * group inside a group that can repeat (T3.56), inside a group quantified exactly once, `{1}` or
+ * `{1,1}` (T2.58), or inside a lookahead (T2.23), and a quantifier
  * other than `{1}`, `{1,1}`, `{0}` or `{0,0}` on a group that can match the empty string (T2.32,
  * which replaces T2.19's empty-iteration rule; bounds read as numbers, T2.34). A quantifier bound
  * above 1000 is refused on anything (T2.59), read without overflow, so no library's own limit is
@@ -290,6 +291,13 @@ internal class DialectTranslator(private val src: String, private val foldAscii:
         return min.isEmpty() || min == "1"
     }
 
+    /** Exactly once (T2.58): `{1}` or `{1,1}`, bounds read as numbers (`{01}`, `{001,1}`, `{1,01}`). */
+    private fun exactlyOnce(q: String): Boolean {
+        if (!q.startsWith("{")) return false
+        val bounds = q.substring(1, q.length - 1).split(',')
+        return bounds.all { it.isNotEmpty() && it.trimStart('0') == "1" }
+    }
+
     /** The quantifier's minimum is 0: `?` `*` `{0}` `{0,}` `{0,m}`, bounds read as numbers. */
     private fun minimumZero(q: String): Boolean =
         if (q.startsWith("{")) q.substring(1).takeWhile { it in '0'..'9' }.all { it == '0' } else q != "+"
@@ -428,9 +436,11 @@ internal class DialectTranslator(private val src: String, private val foldAscii:
         val q = quantifierAt(i)
         val canBeEmpty = f.canBeEmpty()
         // T3.56: a group that can repeat may not hold a named group (JavaScript clears its captures
-        // at each repetition, the JDK and ICU keep the last one). The group's own name may repeat.
-        // Found here, each in its opener's place (T2.17).
-        if (q != null && repeats(q)) f.inner.forEach { report(it.at, it.text) }
+        // at each repetition, the JDK and ICU keep the last one). T2.58: neither may a group quantified
+        // exactly once, {1} or {1,1} (lazy or not): when the match backtracks past it, the JDK keeps a
+        // capture made inside it, JavaScript and ICU drop it. The group's own name may repeat or take
+        // {1}. Found here, each in its opener's place (T2.17).
+        if (q != null && (repeats(q) || exactlyOnce(q))) f.inner.forEach { report(it.at, it.text) }
         // T2.32: a group that can match the empty string takes only {1}, {1,1}, {0} or {0,0}, lazy
         // or not: JavaScript drops an iteration that matched nothing, the JDK keeps it, which moves
         // captures. The quantifier as written, a lazy `?` included, in its own place; a possessive

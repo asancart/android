@@ -21,7 +21,7 @@ import java.util.regex.Pattern
 import java.util.regex.PatternSyntaxException
 
 /**
- * T4.17, T4.18-T4.20, T4.24, T4.27: REQ-DEV-041's regex dialect on the device's own
+ * T4.17, T4.18-T4.20, T4.24, T4.27, T4.26: REQ-DEV-041's regex dialect on the device's own
  * `java.util.regex`, which is ICU on Android. Every allowed construct (with its captures, the
  * empty-match and lookahead rules' allowed examples included), refused token and compile error of
  * the shared case file, bounds above ICU's own limit as `dialect`, and `\d` as `[0-9]` where ICU's
@@ -34,7 +34,7 @@ class DeviceRegexDialectTest {
         val report = RegexDialectCases().run()
         Log.i("AsancartDialect", "API ${Build.VERSION.SDK_INT}: $report")
         assertTrue(report.toString(), report.failures.isEmpty())
-        assertTrue(report.toString(), report.allowed >= 106 && report.refused >= 229 && report.regex >= 7)
+        assertTrue(report.toString(), report.allowed >= 107 && report.refused >= 239 && report.regex >= 7)
     }
 
     @Test
@@ -81,6 +81,18 @@ class DeviceRegexDialectTest {
             assertEquals(listOf(token), e.tokens)
         }
         assertNotNull(PortableRegex.compile("^\\d{1,1000}$").matchWhole("1".repeat(1000)))
+    }
+
+    @Test
+    fun namedGroupInsideExactlyOnceIsRefused() {
+        // Why the exactly-once rule exists (T2.58): the JDK keeps a capture made inside a group
+        // quantified {1} that the match backtracked past; JavaScript and ICU drop it (logged, not asserted).
+        val m = Pattern.compile("^(?:(?:([0-9])){1}x|[0-9])$").matcher("5")
+        val icu = if (m.matches()) "group 1 is ${m.group(1)}" else "no match"
+        Log.i("AsancartDialect", "API ${Build.VERSION.SDK_INT}: ICU (?:(?:(\\d)){1}x|\\d) on 5: $icu")
+        val e = assertThrows(PortableRegex.DialectViolation::class.java) { PortableRegex.compile("^(?:(?:(?<amount>\\d)){1}x|\\d)$") }
+        assertEquals(listOf("(?<amount>"), e.tokens)
+        assertNull(PortableRegex.compile("^(?:(?:(?<amount>\\d)){0,1}x|\\d)$").matchWhole("5")!!["amount"])
     }
 
     @Test
