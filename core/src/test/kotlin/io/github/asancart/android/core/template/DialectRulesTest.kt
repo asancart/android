@@ -211,4 +211,15 @@ class DialectRulesTest {
         assertEquals("^(?:([0-9]*)){1}$", DialectTranslator("^(?:(?<amount>\\d*)){1}$").translate().java)
         assertEquals("^(?=([0-9]))([0-9]+)$", DialectTranslator("^(?=(\\d))(?<amount>\\d+)$").translate().java)
     }
+
+    @Test
+    fun `a quantified lookahead is wrapped in a non-capturing group, which ICU takes`() {
+        // ICU refuses `(?=\d){1}` (Syntax error in regexp pattern); JavaScript and the JDK take it.
+        assertEquals("^(?:(?=[0-9])){1}([0-9]+)$", DialectTranslator("^(?=\\d){1}(?<amount>\\d+)$").translate().java)
+        assertEquals("^(?:(?!x(?:(?=y)){0,0}?)){01}x$", DialectTranslator("^(?!x(?=y){0,0}?){01}x$").translate().java)
+        assertEquals("^(?=a)a$", DialectTranslator("^(?=a)a$").translate().java)
+        allowed("^(?=\\d){1}(?<amount>\\d+)$", "12", "amount" to "12")
+        allowed("^(?!a){0}a(?<amount>\\d)$", "a1", "amount" to "1")
+        allowed("^(?=(\\d)){1,1}?(?<amount>\\d+)$", "12", "amount" to "12")
+    }
 }

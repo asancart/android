@@ -27,6 +27,9 @@ import java.util.regex.PatternSyntaxException
  *   set syntax (`[:…:]`, `{…}`, `&`, ignored white space) never applies inside a class. A `-`
  *   that isn't a range is a literal, as in JavaScript.
  * - `.` excludes only `\n` (UNIX_LINES): JavaScript's `.` on normalized text.
+ * - A quantified lookahead is wrapped in a non-capturing group, `(?=\d){1}` to `(?:(?=\d)){1}`:
+ *   ICU refuses a quantifier right after a lookahead, JavaScript and the JDK take it, and the
+ *   dialect allows `{1}`, `{1,1}`, `{0}` and `{0,0}` there (T2.32).
  * - Flag `i` folds ASCII letters only (T2.18): with it, an ASCII letter outside a class becomes a
  *   class of both cases (`k` to `[kK]`) and a class gets the other case of every ASCII letter it
  *   holds (`[a-f]` to `[a-fA-F]`, `[^k]` to `[^kK]`). Nothing is compiled case-insensitive, so
@@ -111,8 +114,9 @@ internal class DialectTranslator(private val src: String, private val foldAscii:
      * at any depth, whether it is a lookahead, and what REQ-DEV-041 needs to know whether it can
      * match the empty string: whether it is zero-width (a lookahead or lookbehind), whether a
      * finished alternative can, and, for each item of the current alternative, whether it can.
+     * A lookahead also keeps where its opener starts in the rewrite ([outStart]).
      */
-    private class Frame(val named: Token?, val lookahead: Boolean = false, val zeroWidth: Boolean = false) {
+    private class Frame(val named: Token?, val lookahead: Boolean = false, val zeroWidth: Boolean = false, val outStart: Int = -1) {
         val inner = ArrayList<Token>()
         val items = ArrayList<Boolean>()
         var alternativeCanBeEmpty = false
@@ -331,8 +335,9 @@ internal class DialectTranslator(private val src: String, private val foldAscii:
                 open += Frame(null)
             }
             rest.startsWith("(?=") || rest.startsWith("(?!") -> {
+                val at = out.length
                 emit(rest.substring(0, 3), quantifiable = false)
-                open += Frame(null, lookahead = true, zeroWidth = true)
+                open += Frame(null, lookahead = true, zeroWidth = true, outStart = at)
             }
             rest == "(?<=" || rest == "(?<!" || rest.startsWith("(?>") -> {
                 val token = if (rest.startsWith("(?>")) "(?>" else rest
@@ -416,6 +421,13 @@ internal class DialectTranslator(private val src: String, private val foldAscii:
         if (q != null && canBeEmpty && !onceOrNever(q)) {
             val after = src.getOrNull(i + q.length)
             if (after != '+') report(i, if (after == '?') "$q?" else q)
+        }
+        // ICU refuses a quantifier on a lookahead (`(?=\d){1}`: "Syntax error in regexp pattern"),
+        // which JavaScript and the JDK take, and the dialect allows {1}, {1,1}, {0} and {0,0} on one.
+        // A non-capturing group around it means the same and takes the quantifier: `(?:(?=\d)){1}`.
+        if (q != null && f.lookahead) {
+            out.insert(f.outStart, "(?:")
+            out.append(')')
         }
         current().items += canBeEmpty
         open.lastOrNull()?.inner?.let { parent ->
