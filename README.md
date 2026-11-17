@@ -2,7 +2,7 @@
 
 Open-source SMS listener for [Asancart](https://github.com/asancart) (آسان‌کارت). It reads bank deposit SMS on the shop owner's phone, parses them on the device, and reports each deposit (amount, time, card, and a reference when the bank needs one) to Asancart or any backend that implements the Device API. Account balance and SMS text never leave the phone.
 
-Status: app scaffold. Kotlin and Jetpack Compose, Persian right-to-left UI, Asancart theme, first screens (welcome, home with the default profile, activity, templates, settings). SMS capture and parsing, pairing, the send queue and logging come next. The app makes no network calls yet.
+Status: in development. Kotlin and Jetpack Compose, Persian right-to-left UI, Asancart theme, first screens (welcome, home with the default profile, activity, templates, settings), SMS capture and parsing, logging and crash reports, and the Device API client (pairing, Cards refresh, unpair). Profile setup screens and the send queue come next.
 
 ## Build
 
@@ -15,7 +15,7 @@ Needs JDK 21 (17 or newer works), the Android SDK with platform 37, and access t
 ./gradlew :core:test :app:testDebugUnitTest :app:lintDebug :app:assembleDebug :app:assembleRelease
 ```
 
-The Platform address is a build setting, not code: release builds use `https://api.asancart.org`, debug builds a local backend, by default `http://10.0.2.2:8080` (the dev machine as seen from the Android emulator). Change it with `-Pasancart.platformApiUrl=<url>` or in `~/.gradle/gradle.properties`.
+The Platform address is a build setting, not code: release builds use `https://api.asancart.org`, debug builds a local backend, by default `http://10.0.2.2:8080` (the dev machine as seen from the Android emulator). Change it with `-Pasancart.platformApiUrl=<url>` or in `~/.gradle/gradle.properties`. Release builds talk HTTPS only, to the Platform and to any other service's address (`network_security_config.xml`); debug builds also allow HTTP, for a local backend.
 
 The debug APK lands in `app/build/outputs/apk/debug/`, the unsigned release APK in `app/build/outputs/apk/release/`. Screen captures from the unit tests land in `app/build/outputs/screenshots/`. CI ([`.github/workflows/android.yml`](.github/workflows/android.yml)) runs the same tasks on every pull request and uploads the signed debug APK and the screenshots as artifacts.
 
@@ -36,7 +36,7 @@ Template patterns follow the regex dialect the admin panel, the server and the a
 | Path | What |
 |---|---|
 | [`app/`](app) | The Android app: Compose UI, theme, Android adapters |
-| [`core/`](core) | Plain Kotlin, no Android: Profiles, Parser Templates, normalization, Transfer Reports, queue, heartbeat, Device API contract and its stub. Runs as JVM unit tests |
+| [`core/`](core) | Plain Kotlin, no Android: Profiles, Parser Templates, normalization, Transfer Reports, queue, heartbeat, Device API contract, its HTTP client and a stub. Runs as JVM unit tests |
 | [`design/`](design) | Clickable wireframe and full mockups |
 | [`docs/design-brief.md`](docs/design-brief.md) | UX decisions, screen list |
 
@@ -44,10 +44,11 @@ Packages:
 
 | Package | Role |
 |---|---|
-| `core.profile` | Profiles, API targets, Card Bindings, the rule for turning a profile on |
+| `core.profile` | Profiles (stored as JSON in app storage), API targets, Card Bindings, the rule for turning a profile on; pairing, Cards refresh and removal with unpair (`ProfileConnections`) |
 | `core.sms`, `core.template` | Incoming SMS, normalization and Parser Template engine (schema v1) |
 | `core.queue`, `core.heartbeat` | Transfer Reports, the per-target outgoing queue, heartbeat setting |
-| `core.deviceapi` | Typed Device API (`/v1/device`) and an in-memory stub |
+| `core.deviceapi` | Typed Device API (`/v1/device`): `HttpDeviceApi` over `HttpURLConnection` (no library), and an in-memory stub for tests and demos |
+| `profile` | Device credentials sealed with an Android Keystore key, per Profile |
 | `capture` | SMS receiver and inbox re-scan (Android side) |
 | `log` | Rolling file log (5 × 1 MB), the log filter, log export, ACRA crash reports; never SMS text, balances or credentials |
 | `ui` | Screens, components and the theme (`ui/theme`, colours copied from the Asancart tokens) |

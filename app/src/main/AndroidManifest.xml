@@ -2,9 +2,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Capture (REQ-APP-010, REQ-APP-011, REQ-APP-026). No INTERNET yet: sending comes with T4.3/T4.4. -->
+    <!-- Capture (REQ-APP-010, REQ-APP-011, REQ-APP-026). Never SEND_SMS (REQ-APP-031). -->
     <uses-permission android:name="android.permission.RECEIVE_SMS" />
     <uses-permission android:name="android.permission.READ_SMS" />
+    <!-- The Device API over HTTPS (REQ-DEV-033, T4.3). -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <!-- Permissions screen (REQ-APP-026): battery optimization exemption, notifications. -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -19,6 +21,7 @@
         android:fullBackupContent="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
+        android:networkSecurityConfig="@xml/network_security_config"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Asancart">

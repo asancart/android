@@ -127,6 +127,17 @@ class CaptureStore(context: Context, name: String? = "capture.db") : SQLiteOpenH
             buildMap { while (c.moveToNext()) put(c.getString(0), c.getInt(1)) }
         }
 
+    /**
+     * A removed Profile's queue and unparsed SMS (REQ-APP-030, REQ-APP-040: the queue goes after the
+     * warning). Both in one transaction.
+     */
+    fun deleteProfileData(profileId: String) {
+        inTransaction {
+            writableDatabase.delete("outgoing", "profile_id = ?", arrayOf(profileId))
+            writableDatabase.delete("unparsed", "profile_id = ?", arrayOf(profileId))
+        }
+    }
+
     // Handled SMS, so the receiver and the inbox re-scan never handle one SMS twice
 
     fun seenNear(fingerprint: String, at: Instant, windowMillis: Long): Boolean =

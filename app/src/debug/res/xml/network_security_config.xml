@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Debug builds only: HTTP to a local backend, `http://10.0.2.2:8080` from the emulator or the
+     address set with asancart.platformApiUrl (REQ-APP-022, REQ-INF-006). Release builds use
+     src/main's file: HTTPS only. -->
+<network-security-config xmlns:tools="http://schemas.android.com/tools">
+    <base-config cleartextTrafficPermitted="true" tools:ignore="InsecureBaseConfiguration">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

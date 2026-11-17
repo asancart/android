@@ -129,6 +129,13 @@ class CaptureService(
         publish()
     }
 
+    /** A removed Profile: its queue and unparsed SMS go (REQ-APP-040). */
+    fun forgetProfile(profileId: String): Job = scope.launch {
+        store.deleteProfileData(profileId)
+        log.info("profile_data_deleted", "profile_id" to profileId)
+        publish()
+    }
+
     /** The Profile's queued Transfer Reports, oldest first (sending: T4.4). */
     fun pending(profileId: String): List<TransferReport> = store.pending(profileId)
 

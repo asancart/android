@@ -9,8 +9,9 @@ import kotlinx.serialization.json.jsonPrimitive
 import java.time.Instant
 
 /**
- * In-memory [DeviceApi] with sample data. It never opens a connection: while BLK-001 holds (DEC-030)
- * this is the only implementation, used to build screens and flows against the contract.
+ * In-memory [DeviceApi] with sample data. It never opens a connection: demos and tests use it to
+ * build screens and flows against the contract (REQ-BE-015); the app talks to its targets with
+ * [HttpDeviceApi].
  *
  * Behaviour follows `api/device-api.md` closely enough for the UI: one valid pairing code
  * (compared case-insensitively), the request validation rules, UNAUTHORIZED before pairing or after
