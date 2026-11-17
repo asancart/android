@@ -1,10 +1,11 @@
 {
  "about": [
-  "REQ-DEV-041 regex dialect cases (asancart documents api/device-api.md: T2.15, T3.55, T2.16, T3.56, T2.17, T2.18, T2.19, T2.23, T2.32, T2.34), the shared case set every engine runs. Not SMS data.",
+  "REQ-DEV-041 regex dialect cases (asancart documents api/device-api.md: T2.15, T3.55, T2.16, T3.56, T2.17, T2.18, T2.19, T2.23, T2.32, T2.34, T2.59), the shared case set every engine runs. Not SMS data.",
   "allowed: inside the dialect; each text is matched after REQ-DEV-050's always-on steps, as a full match: the text matches ^(?:P)$ (REQ-DEV-041); groups lists named groups for some texts, each of which must match (T4.24; null: did not take part).",
   "flag i folds ASCII letters only (T2.18): every engine rewrites the pattern (k to [kK], [a-f] to [a-fA-F]) and compiles it without its own case-insensitive option.",
   "refused: outside the dialect; tokens are the code dialect details, one per distinct token, in order of first occurrence.",
   "empty-match rule (T2.19, T2.32): a group of any kind that can match the empty string takes only {1}, {1,1}, {0} or {0,0}, lazy or not, bounds read as numbers (T2.34); any other quantifier is refused, the quantifier as written as token. Lookahead rule (T2.23): a named group inside (?= or (?! is refused, its opener as token.",
+  "bound rule (T2.59): a quantifier {n}, {n,} or {n,m} with n or m above 1000, read as a number without overflow (leading zeros dropped), n > m included, is refused on anything, the quantifier as written as token (a lazy ? included; a possessive one as possessive only).",
   "regex: inside the dialect, but no engine compiles it (code regex).",
   "Run on the JVM by :core:test, on Android's ICU by the app's instrumented tests, and against JavaScript RegExp (the admin engine's library) by scripts/check-dialect-cases.mjs."
  ],
@@ -1463,6 +1464,41 @@
      }
     }
    ]
+  },
+  {
+   "construct": "bound rule (T2.59): a bound of 1000",
+   "pattern": "^(?<amount>\\d{1,1000})$",
+   "match": [
+    "123"
+   ],
+   "noMatch": [],
+   "groups": [
+    {
+     "text": "123",
+     "named": {
+      "amount": "123"
+     }
+    }
+   ]
+  },
+  {
+   "construct": "bound rule: 01000 is 1000, read as a number (T2.34)",
+   "pattern": "^\\d{0,01000}x$",
+   "match": [
+    "x",
+    "12x"
+   ],
+   "noMatch": []
+  },
+  {
+   "construct": "bound rule: {1000} on a group",
+   "pattern": "^(?:\\d{1000})?x$",
+   "match": [
+    "x"
+   ],
+   "noMatch": [
+    "1x"
+   ]
   }
  ],
  "refused": [
@@ -2816,6 +2852,61 @@
    "pattern": "^(?<amount\\d+)x>$",
    "tokens": [
     "(?<amount\\d+)x>"
+   ]
+  },
+  {
+   "pattern": "^(?<amount>\\d{1,16777216})$",
+   "tokens": [
+    "{1,16777216}"
+   ]
+  },
+  {
+   "pattern": "^\\d{1001}$",
+   "tokens": [
+    "{1001}"
+   ]
+  },
+  {
+   "pattern": "^\\d{1001,}$",
+   "tokens": [
+    "{1001,}"
+   ]
+  },
+  {
+   "pattern": "^\\d{0,1001}?$",
+   "tokens": [
+    "{0,1001}?"
+   ]
+  },
+  {
+   "pattern": "^a{2147483648}$",
+   "tokens": [
+    "{2147483648}"
+   ]
+  },
+  {
+   "pattern": "^\\d{2000,1}$",
+   "tokens": [
+    "{2000,1}"
+   ]
+  },
+  {
+   "pattern": "^\\d{00000000000000000001001}$",
+   "tokens": [
+    "{00000000000000000001001}"
+   ]
+  },
+  {
+   "pattern": "^\\d{1001}+$",
+   "tokens": [
+    "}+"
+   ]
+  },
+  {
+   "pattern": "^{1001}?a$",
+   "tokens": [
+    "{1001}",
+    "?"
    ]
   }
  ],
