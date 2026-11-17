@@ -1,12 +1,13 @@
 {
  "about": [
-  "REQ-DEV-041 regex dialect cases (asancart documents api/device-api.md: T2.15, T3.55, T2.16, T3.56, T2.17, T2.18, T2.19, T2.23, T2.32, T2.34, T2.58, T2.59), the shared case set every engine runs. Not SMS data.",
+  "REQ-DEV-041 regex dialect cases (asancart documents api/device-api.md: T2.15, T3.55, T2.16, T3.56, T2.17, T2.18, T2.19, T2.23, T2.32, T2.34, T2.58, T2.59, T2.60, T2.66), the shared case set every engine runs. Not SMS data.",
   "allowed: inside the dialect; each text is matched after REQ-DEV-050's always-on steps, as a full match: the text matches ^(?:P)$ (REQ-DEV-041); groups lists named groups for some texts, each of which must match (T4.24; null: did not take part).",
   "flag i folds ASCII letters only (T2.18): every engine rewrites the pattern (k to [kK], [a-f] to [a-fA-F]) and compiles it without its own case-insensitive option.",
   "refused: outside the dialect; tokens are the code dialect details, one per distinct token, in order of first occurrence.",
   "empty-match rule (T2.19, T2.32): a group of any kind that can match the empty string takes only {1}, {1,1}, {0} or {0,0}, lazy or not, bounds read as numbers (T2.34); any other quantifier is refused, the quantifier as written as token. Lookahead rule (T2.23): a named group inside (?= or (?! is refused, its opener as token.",
   "exactly-once rule (T2.58): a named group at any depth inside a group quantified {1} or {1,1} (numeric value, lazy or not) is refused, its opener as token, as inside a group that can repeat (T3.56). A named group itself quantified {1} stays allowed.",
   "bound rule (T2.59): a quantifier {n}, {n,} or {n,m} with n or m above 1000, read as a number without overflow (leading zeros dropped), n > m included, is refused on anything, the quantifier as written as token (a lazy ? included; a possessive one as possessive only).",
+  "loop rule (T2.60, T2.66): a group that can repeat (upper bound above 1 or open) must be fixed (no | and no variable quantifier inside, at any depth) or delimited (no |, exactly one variable quantifier, and as first or last item an unquantified literal character no other character item inside matches, with flag s, with or without i); else its quantifier as written is the token. Variable: ? * + {n,} and {n,m} with n < m; {n,m} with n > m is not one (T2.66). An escaped \\- in a class is a literal - (T2.66).",
   "regex: inside the dialect, but no engine compiles it (code regex).",
   "Run on the JVM by :core:test, on Android's ICU by the app's instrumented tests, and against JavaScript RegExp (the admin engine's library) by scripts/check-dialect-cases.mjs."
  ],
@@ -1197,47 +1198,6 @@
    ]
   },
   {
-   "construct": "empty-match rule: no alternative can match empty",
-   "pattern": "^(?:a|b)+$",
-   "match": [
-    "ab"
-   ],
-   "noMatch": [
-    ""
-   ]
-  },
-  {
-   "construct": "empty-match rule: a quantified item with a minimum above 0",
-   "pattern": "^(?:a{1,2})+$",
-   "match": [
-    "aaa"
-   ],
-   "noMatch": [
-    ""
-   ]
-  },
-  {
-   "construct": "empty-match rule: every alternative holds a character",
-   "pattern": "^(?:a?b*c)+$",
-   "match": [
-    "cbc",
-    "abbc"
-   ],
-   "noMatch": [
-    "ab"
-   ]
-  },
-  {
-   "construct": "empty-match rule: an item with minimum 1 that can't match empty",
-   "pattern": "^(?:a+b{1,2})+$",
-   "match": [
-    "abab"
-   ],
-   "noMatch": [
-    "a"
-   ]
-  },
-  {
    "construct": "empty-match rule: an inner group taken {1} next to a character",
    "pattern": "^(?:a(?:b?){1})+$",
    "match": [
@@ -1496,6 +1456,125 @@
      "text": "ab",
      "named": {
       "amount": null
+     }
+    }
+   ]
+  },
+  {
+   "construct": "loop rule (T2.60): delimited by the dot, as pasargad-account and resalat-account",
+   "pattern": "^\\d+(?:\\.\\d+)+$",
+   "match": [
+    "1.2",
+    "12.34.5"
+   ],
+   "noMatch": [
+    "12",
+    "1..2",
+    "1.2."
+   ]
+  },
+  {
+   "construct": "loop rule (T2.60): delimited by a final \\n that [^\\n] doesn't match",
+   "pattern": "^(?:[^\\n]*\\n)*x$",
+   "match": [
+    "x",
+    "ab\nx",
+    "\n\nx"
+   ],
+   "noMatch": [
+    "ab\nxy",
+    "a"
+   ]
+  },
+  {
+   "construct": "loop rule (T2.60): delimited by a first comma, bounded",
+   "pattern": "^(?:,\\d+){0,3}$",
+   "match": [
+    "",
+    ",1",
+    ",1,22,333"
+   ],
+   "noMatch": [
+    ",1,2,3,4",
+    "1"
+   ]
+  },
+  {
+   "construct": "loop rule (T2.60): delimited by k, which [^k] never matches; without i",
+   "pattern": "^(?:k[^k]+)+$",
+   "match": [
+    "kab",
+    "kKa"
+   ],
+   "noMatch": [
+    "kk",
+    "Kab"
+   ]
+  },
+  {
+   "construct": "loop rule (T2.60): delimited by k with flag i",
+   "pattern": "^(?:k[^k]+)+$",
+   "flags": "i",
+   "match": [
+    "kab",
+    "Kab",
+    "KaKb"
+   ],
+   "noMatch": [
+    "kKa",
+    "kk"
+   ]
+  },
+  {
+   "construct": "loop rule (T2.60): fixed: no | and no variable quantifier inside",
+   "pattern": "^(?:\\d{3},)*\\d{3}$",
+   "match": [
+    "123",
+    "123,456,789"
+   ],
+   "noMatch": [
+    "1234",
+    "12,345"
+   ]
+  },
+  {
+   "construct": "loop rule (T2.60): fixed, two characters",
+   "pattern": "^(?:ab)+$",
+   "match": [
+    "ab",
+    "abab"
+   ],
+   "noMatch": [
+    "",
+    "aba"
+   ]
+  },
+  {
+   "construct": "loop rule (T2.60): an escaped \\- in a class is a literal -, never a range dash (T2.66)",
+   "pattern": "^(?:b[a\\-c]*)+$",
+   "match": [
+    "bac-"
+   ],
+   "noMatch": [
+    "ab"
+   ]
+  },
+  {
+   "construct": "loop rule (T2.60): fixed, a named group repeated itself",
+   "pattern": "^(?<amount>\\d)+$",
+   "match": [
+    "5",
+    "123"
+   ],
+   "noMatch": [
+    "",
+    "1a"
+   ],
+   "groups": [
+    {
+     "text": "123",
+     "named": {
+      "amount": "3"
      }
     }
    ]
@@ -2270,7 +2349,8 @@
   {
    "pattern": "^(?:(?<amount>\\d+)|x)*$",
    "tokens": [
-    "(?<amount>"
+    "(?<amount>",
+    "*"
    ]
   },
   {
@@ -2566,7 +2646,8 @@
   {
    "pattern": "^(?:(?:a?)*b)+$",
    "tokens": [
-    "*"
+    "*",
+    "+"
    ]
   },
   {
@@ -2819,7 +2900,8 @@
   {
    "pattern": "^(?:(?=(?<amount>\\d+))\\d)+$",
    "tokens": [
-    "(?<amount>"
+    "(?<amount>",
+    "+"
    ]
   },
   {
@@ -2968,6 +3050,90 @@
    "tokens": [
     "(?<reference>"
    ]
+  },
+  {
+   "pattern": "^\\D(?<amount>[\\d,۰-۹]+){1,}?$",
+   "tokens": [
+    "{1,}?"
+   ]
+  },
+  {
+   "pattern": "^(?<amount>[\\d,]+){10}$",
+   "tokens": [
+    "{10}"
+   ]
+  },
+  {
+   "pattern": "^(?:\\d{1,3})+$",
+   "tokens": [
+    "+"
+   ]
+  },
+  {
+   "pattern": "^(?:\\d|\\d)*x$",
+   "tokens": [
+    "*"
+   ]
+  },
+  {
+   "pattern": "^(?:\\d+,?)+$",
+   "tokens": [
+    "+"
+   ]
+  },
+  {
+   "pattern": "^(?:.*\\n)*x$",
+   "tokens": [
+    "*"
+   ]
+  },
+  {
+   "pattern": "^(?:K[^k]+)+$",
+   "tokens": [
+    "+"
+   ]
+  },
+  {
+   "pattern": "^(?:\\.\\d+\\.)+$",
+   "tokens": [
+    "+"
+   ]
+  },
+  {
+   "pattern": "^(?:a+)++$",
+   "tokens": [
+    "++"
+   ]
+  },
+  {
+   "pattern": "^(?:-[a\\-c]*)+$",
+   "tokens": [
+    "+"
+   ]
+  },
+  {
+   "pattern": "^(?:a|b)+$",
+   "tokens": [
+    "+"
+   ]
+  },
+  {
+   "pattern": "^(?:a{1,2})+$",
+   "tokens": [
+    "+"
+   ]
+  },
+  {
+   "pattern": "^(?:a?b*c)+$",
+   "tokens": [
+    "+"
+   ]
+  },
+  {
+   "pattern": "^(?:a+b{1,2})+$",
+   "tokens": [
+    "+"
+   ]
   }
  ],
  "regex": [
@@ -2998,6 +3164,10 @@
   {
    "pattern": "^(?:a$",
    "why": "unclosed non-capturing group"
+  },
+  {
+   "pattern": "^(?:a{2,1})+$",
+   "why": "numbers out of order, in a fixed group (T2.66)"
   }
  ]
 }

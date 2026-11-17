@@ -21,7 +21,7 @@ import java.util.regex.Pattern
 import java.util.regex.PatternSyntaxException
 
 /**
- * T4.17, T4.18-T4.20, T4.24, T4.27, T4.26: REQ-DEV-041's regex dialect on the device's own
+ * T4.17, T4.18-T4.20, T4.24, T4.27, T4.26, T4.25: REQ-DEV-041's regex dialect on the device's own
  * `java.util.regex`, which is ICU on Android. Every allowed construct (with its captures, the
  * empty-match and lookahead rules' allowed examples included), refused token and compile error of
  * the shared case file, bounds above ICU's own limit as `dialect`, and `\d` as `[0-9]` where ICU's
@@ -34,7 +34,7 @@ class DeviceRegexDialectTest {
         val report = RegexDialectCases().run()
         Log.i("AsancartDialect", "API ${Build.VERSION.SDK_INT}: $report")
         assertTrue(report.toString(), report.failures.isEmpty())
-        assertTrue(report.toString(), report.allowed >= 107 && report.refused >= 239 && report.regex >= 7)
+        assertTrue(report.toString(), report.allowed >= 112 && report.refused >= 253 && report.regex >= 8)
     }
 
     @Test
@@ -93,6 +93,25 @@ class DeviceRegexDialectTest {
         val e = assertThrows(PortableRegex.DialectViolation::class.java) { PortableRegex.compile("^(?:(?:(?<amount>\\d)){1}x|\\d)$") }
         assertEquals(listOf("(?<amount>"), e.tokens)
         assertNull(PortableRegex.compile("^(?:(?:(?<amount>\\d)){0,1}x|\\d)$").matchWhole("5")!!["amount"])
+    }
+
+    @Test
+    fun delimitedLoopsFailFastOnIcu() {
+        // The loop rule (T2.60) keeps a repeated group fixed or delimited, so a text that doesn't
+        // match splits into iterations one way only; qa-32 saw refused ones run over 30 s on ICU.
+        val refused = assertThrows(PortableRegex.DialectViolation::class.java) { PortableRegex.compile("^\\D(?<amount>[\\d,\u06F0-\u06F9]+){1,}?$") }
+        assertEquals(listOf("{1,}?"), refused.tokens)
+        for ((pattern, text) in listOf(
+            "^\\d+(?:\\.\\d+)+$" to "1" + ".12".repeat(1000) + "x",
+            "^(?:[^\\n]*\\n)*x$" to "ab\n".repeat(1000) + "y",
+            "^(?:k[^k]+)+$" to "kab".repeat(1000) + "k",
+        )) {
+            val start = System.nanoTime()
+            assertNull(PortableRegex.compile(pattern).matchWhole(text))
+            val ms = (System.nanoTime() - start) / 1_000_000
+            Log.i("AsancartDialect", "API ${Build.VERSION.SDK_INT}: loop rule, no match on ${text.length} characters in $ms ms")
+            assertTrue("$ms ms", ms < 5_000)
+        }
     }
 
     @Test
