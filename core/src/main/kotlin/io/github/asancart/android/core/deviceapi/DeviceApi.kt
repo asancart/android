@@ -6,16 +6,19 @@ import java.time.Instant
 /**
  * Device API seam: the typed contract of `api/device-api.md` (base path `/v1/device`, DEC-010).
  *
- * One instance talks to one API target with one Device credential. Until the owner lifts BLK-001
- * (DEC-030) the app only has [StubDeviceApi]; the HTTP adapter is added behind this interface
- * later, so screens and the queue don't change. Field names here are Kotlin style; the adapter maps
- * them to the snake_case JSON of the contract.
+ * One instance talks to one API target with one Device credential (none for Pair and Parser
+ * Templates). [HttpDeviceApi] is the real client (T4.3, DEC-034); [StubDeviceApi] stays for demos and
+ * tests. Field names here are Kotlin style; the adapter maps them to the snake_case JSON of the
+ * contract.
  */
 interface DeviceApi {
     /** REQ-DEV-001, no auth. */
     suspend fun pair(request: PairRequest): ApiResult<PairResponse>
 
-    /** REQ-DEV-002: 1..100 reports; results in request order. */
+    /**
+     * REQ-DEV-002: 1..100 reports; results in request order. The adapter sets `device_time` to the
+     * phone clock of each send attempt.
+     */
     suspend fun submitReports(reports: List<TransferReport>): ApiResult<List<ReportResult>>
 
     /** REQ-DEV-003. */
@@ -38,7 +41,21 @@ interface DeviceApi {
 sealed interface ApiResult<out T> {
     data class Ok<T>(val value: T) : ApiResult<T>
 
-    data class Error(val httpStatus: Int, val code: String, val message: String) : ApiResult<Nothing>
+    /**
+     * [message] is the target's own text for [code] (Persian on the Platform, device-api.md Error
+     * messages), empty when the answer had no REQ-DEV-031 body. [retryAfterSec] is `Retry-After` of a
+     * `429` (REQ-DEV-034, REQ-DEV-035); [requestId] is the body's `request_id`, for support.
+     */
+    data class Error(
+        val httpStatus: Int,
+        val code: String,
+        val message: String,
+        val retryAfterSec: Long? = null,
+        val requestId: String? = null,
+    ) : ApiResult<Nothing> {
+        /** REQ-DEV-030, REQ-APP-030: a `401` on an authenticated call means the credential is revoked. */
+        val unauthorized: Boolean get() = httpStatus == 401
+    }
 
     /** Network error or no response: the queue keeps the item and retries (REQ-DEV-011). */
     data class Unreachable(val reason: String) : ApiResult<Nothing>
@@ -50,6 +67,13 @@ object ErrorCode {
     const val VALIDATION_FAILED = "VALIDATION_FAILED"
     const val PAIRING_INVALID = "PAIRING_INVALID"
     const val PLAN_LIMIT = "PLAN_LIMIT"
+    const val RATE_LIMITED = "RATE_LIMITED"
+
+    /** Not a contract code: an error status whose body isn't a REQ-DEV-031 error (a proxy page, a redirect). */
+    const val HTTP_ERROR = "HTTP_ERROR"
+
+    /** Not a contract code: a success status whose body doesn't have the documented shape. */
+    const val INVALID_RESPONSE = "INVALID_RESPONSE"
 }
 
 /** [pairingCode] is a single-use secret (F-04): never logged, so [toString] hides it. */

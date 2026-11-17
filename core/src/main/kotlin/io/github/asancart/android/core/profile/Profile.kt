@@ -9,10 +9,12 @@ import java.time.Instant
 
 /**
  * A Profile: one API target with its Device credential, Shop, Card Bindings, heartbeat setting and
- * on/off switch (REQ-APP-020). Pairing, bindings and storage come in T4.3.
+ * on/off switch (REQ-APP-020). Stored on the phone by [ProfileRepository]; paired, refreshed and
+ * removed by [ProfileConnections] (T4.3).
  *
- * The Device credential is deliberately not a field here: it is kept in encrypted storage and looked
- * up by [id] (T4.3), so a Profile can be logged or shown without leaking it (REQ-OPS-003).
+ * The Device credential is deliberately not a field here: it is kept in encrypted storage
+ * ([CredentialStore]) and looked up by [id], so a Profile can be logged or shown without leaking it
+ * (REQ-OPS-003).
  */
 data class Profile(
     val id: String,
@@ -32,6 +34,12 @@ data class Profile(
 ) {
     /** True when an SMS received at [time] belongs to this Profile's capture. */
     fun captures(time: Instant): Boolean = enabled && (enabledAt == null || !time.isBefore(enabledAt))
+
+    /** Paired once (REQ-APP-023); it may since have been revoked. */
+    val paired: Boolean get() = connection != null
+
+    /** REQ-APP-030: the target answered `401`; nothing is sent until it is paired again or a retry succeeds. */
+    val revoked: Boolean get() = connection?.revokedAt != null
 }
 
 /**
@@ -54,10 +62,13 @@ data class ApiTarget(val kind: Kind, val baseUrl: String) {
          * use the production `https://api.asancart.org` (DEC-029), debug builds a local backend.
          */
         fun platform(baseUrl: String) = ApiTarget(Kind.PLATFORM, baseUrl)
+
+        /** Another service's target, from an address [TargetUrl.parse] accepted (REQ-APP-022). */
+        fun custom(url: TargetUrl.Valid) = ApiTarget(Kind.CUSTOM, url.baseUrl)
     }
 }
 
-/** What pairing returned (REQ-DEV-001), refreshed by REQ-DEV-008. */
+/** What pairing returned (REQ-DEV-001), [cards] and [banks] refreshed by REQ-DEV-008. */
 data class Connection(
     val deviceId: String,
     /** Defaults to the phone model, editable (REQ-APP-023). */
@@ -65,6 +76,8 @@ data class Connection(
     val shop: ShopRef,
     val cards: List<Card>,
     val banks: List<Bank>,
+    /** When a `401` marked the Profile revoked (REQ-APP-030); null while the credential works. */
+    val revokedAt: Instant? = null,
 )
 
 /**

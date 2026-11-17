@@ -101,7 +101,7 @@ class ScreenshotTest {
     @Composable
     private fun SampleLogs() = LogsScreen(
         profiles = container.profiles.profiles.collectAsState().value,
-        optedIn = setOf(DEFAULT_PROFILE_ID),
+        optedIn = container.profiles.profiles.collectAsState().value.map { it.id }.toSet(),
         lines = listOf(
             "{\"time\":\"2026-11-12T10:00:00Z\",\"level\":\"INFO\",\"app\":\"android\",\"env\":\"debug\",\"msg\":\"profile_ready\",\"profile_id\":\"default\"}",
             "{\"time\":\"2026-11-12T10:00:05Z\",\"level\":\"WARN\",\"app\":\"android\",\"env\":\"debug\",\"msg\":\"templates_refresh_failed\",\"http\":\"503\"}",

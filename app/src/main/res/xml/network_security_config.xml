@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- REQ-DEV-033: the Device credential travels in every request, so release builds talk HTTPS only,
+     to the Platform and to every custom target, and trust only the system's certificate authorities.
+     Debug builds replace this file (src/debug) to reach a local backend over HTTP (REQ-INF-006). -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

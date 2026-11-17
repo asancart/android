@@ -88,18 +88,19 @@ class AppShellTest {
         rule.onNodeWithText(text(R.string.nav_settings)).performClick()
         rule.onNodeWithText(text(R.string.settings_logs)).performScrollTo().performClick()
         rule.onNodeWithContentDescription(rule.activity.getString(R.string.logs_crash_switch, text(R.string.profile_default_name))).performClick()
-        assertEquals(setOf(DEFAULT_PROFILE_ID), app.container.crashReports.optedIn().keys)
+        assertEquals(setOf(app.container.profiles.profiles.value.single().id), app.container.crashReports.optedIn().keys)
     }
 
     @Test
-    fun manifestAsksForSmsButNotForNetworkYet() {
+    fun manifestAsksForSmsAndInternetOnly() {
         val pm = rule.activity.packageManager
         val info = pm.getPackageInfo(rule.activity.packageName, PackageManager.GET_PERMISSIONS or PackageManager.GET_RECEIVERS)
         val requested = info.requestedPermissions.orEmpty().toSet()
-        // REQ-APP-010, REQ-APP-011: capture. Sending (INTERNET) comes with T4.3/T4.4.
+        // REQ-APP-010, REQ-APP-011: capture. The Device API (T4.3) needs INTERNET; never SEND_SMS (REQ-APP-031).
         assertTrue(Manifest.permission.RECEIVE_SMS in requested)
         assertTrue(Manifest.permission.READ_SMS in requested)
-        assertFalse(Manifest.permission.INTERNET in requested)
+        assertTrue(Manifest.permission.INTERNET in requested)
+        assertFalse(Manifest.permission.SEND_SMS in requested)
         // Only the system can deliver SMS_RECEIVED to the receiver.
         val receiver = info.receivers.orEmpty().single { it.name.endsWith(".capture.SmsReceiver") }
         assertEquals(Manifest.permission.BROADCAST_SMS, receiver.permission)
