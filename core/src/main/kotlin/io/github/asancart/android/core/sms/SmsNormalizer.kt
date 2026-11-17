@@ -126,16 +126,25 @@ object Normalizer : SmsNormalizer {
     }
 
     /**
-     * REQ-DEV-051: bidi controls removed, digits to Latin, whitespace, `-`, `(` and `)` removed.
-     * Numeric IDs (`^\+?\d+$`) keep their last 10 digits (shorter kept whole); text IDs are
-     * lowercased. An empty result never matches ([senderMatches]).
+     * REQ-DEV-051: bidi controls removed, digits to Latin, whitespace (JavaScript's `\s` set,
+     * [isJsWhitespace]), `-`, `(` and `)` removed. Numeric IDs (`^\+?\d+$`) keep their last 10
+     * digits (shorter kept whole); text IDs lowercase ASCII letters only (T2.23). An empty result
+     * never matches ([senderMatches]).
      */
     override fun normalizeSender(sender: String): String {
         val compact = normalizeDigits(removeBidi(sender)).filterNot { isJsWhitespace(it) || it == '-' || it == '(' || it == ')' }
         val digits = compact.removePrefix("+")
         if (digits.isNotEmpty() && digits.all { it in '0'..'9' }) return if (digits.length > 10) digits.takeLast(10) else digits
-        return compact.lowercase()
+        return lowercaseAscii(compact)
     }
+
+    /**
+     * `A`–`Z` to `a`–`z`, every other character as it is (REQ-DEV-051 step 3, T2.23). Not the
+     * library's lowercasing: Kotlin `lowercase()` and Java `toLowerCase(Locale.ROOT)` turn a final
+     * Greek capital sigma into `ς` where JavaScript gives `σ` (`aوΣ`), and the admin engine and the
+     * server lowercase ASCII only.
+     */
+    fun lowercaseAscii(s: String): String = map(s) { if (it in 'A'..'Z') it + ('a' - 'A') else it }
 
     /** True when [sender] equals one of [patterns] after normalization. */
     fun senderMatches(patterns: List<String>, sender: String): Boolean {
