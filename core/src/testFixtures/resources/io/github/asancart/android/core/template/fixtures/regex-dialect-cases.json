@@ -1,9 +1,10 @@
 {
  "about": [
-  "REQ-DEV-041 regex dialect cases (asancart documents api/device-api.md: T2.15, T3.55, T2.16, T3.56, T2.17, T2.18), the shared case set every engine runs. Not SMS data.",
+  "REQ-DEV-041 regex dialect cases (asancart documents api/device-api.md: T2.15, T3.55, T2.16, T3.56, T2.17, T2.18, T2.19, T2.23, T2.32, T2.34), the shared case set every engine runs. Not SMS data.",
   "allowed: inside the dialect; each text is matched after REQ-DEV-050's always-on steps, as a full match: the text matches ^(?:P)$ (REQ-DEV-041); groups lists named groups for some texts (null: did not take part).",
   "flag i folds ASCII letters only (T2.18): every engine rewrites the pattern (k to [kK], [a-f] to [a-fA-F]) and compiles it without its own case-insensitive option.",
   "refused: outside the dialect; tokens are the code dialect details, one per distinct token, in order of first occurrence.",
+  "empty-match rule (T2.19, T2.32): a group of any kind that can match the empty string takes only {1}, {1,1}, {0} or {0,0}, lazy or not, bounds read as numbers (T2.34); any other quantifier is refused, the quantifier as written as token. Lookahead rule (T2.23): a named group inside (?= or (?! is refused, its opener as token.",
   "regex: inside the dialect, but no engine compiles it (code regex).",
   "Run on the JVM by :core:test, on Android's ICU by the app's instrumented tests, and against JavaScript RegExp (the admin engine's library) by scripts/check-dialect-cases.mjs."
  ],
@@ -937,6 +938,531 @@
    "noMatch": [
     "ﬁ"
    ]
+  },
+  {
+   "construct": "empty-match rule (T2.32): a named group that can't match empty repeats, its last repetition",
+   "pattern": "^(?<amount>\\d)+$",
+   "match": [
+    "12"
+   ],
+   "noMatch": [
+    "",
+    "1a"
+   ],
+   "groups": [
+    {
+     "text": "12",
+     "named": {
+      "amount": "2"
+     }
+    }
+   ]
+  },
+  {
+   "construct": "empty-match rule: a group that can't match empty takes ?",
+   "pattern": "^(?<amount>[\\d,]+)?x$",
+   "match": [
+    "x",
+    "1,2x"
+   ],
+   "noMatch": [
+    "1,2",
+    ""
+   ],
+   "groups": [
+    {
+     "text": "x",
+     "named": {
+      "amount": null
+     }
+    },
+    {
+     "text": "1,2x",
+     "named": {
+      "amount": "1,2"
+     }
+    }
+   ]
+  },
+  {
+   "construct": "empty-match rule: an iteration always holds ref:",
+   "pattern": "^(?:ref:(?<reference>\\d*))?x$",
+   "match": [
+    "x",
+    "ref:x",
+    "ref:7x"
+   ],
+   "noMatch": [
+    "ref:",
+    "ref:7"
+   ],
+   "groups": [
+    {
+     "text": "x",
+     "named": {
+      "reference": null
+     }
+    },
+    {
+     "text": "ref:x",
+     "named": {
+      "reference": ""
+     }
+    },
+    {
+     "text": "ref:7x",
+     "named": {
+      "reference": "7"
+     }
+    }
+   ]
+  },
+  {
+   "construct": "empty-match rule: exactly once, {1}",
+   "pattern": "^(?:(?<amount>\\d*)){1}$",
+   "match": [
+    "",
+    "12"
+   ],
+   "noMatch": [
+    "a"
+   ],
+   "groups": [
+    {
+     "text": "",
+     "named": {
+      "amount": ""
+     }
+    },
+    {
+     "text": "12",
+     "named": {
+      "amount": "12"
+     }
+    }
+   ]
+  },
+  {
+   "construct": "empty-match rule: the doc's rewrite of ^(?:(?<amount>\\d+)|)?x$",
+   "pattern": "^(?<amount>\\d+)?x$",
+   "match": [
+    "x",
+    "12x"
+   ],
+   "noMatch": [
+    "12"
+   ],
+   "groups": [
+    {
+     "text": "x",
+     "named": {
+      "amount": null
+     }
+    },
+    {
+     "text": "12x",
+     "named": {
+      "amount": "12"
+     }
+    }
+   ]
+  },
+  {
+   "construct": "empty-match rule: exactly never, {0,0}, on a named group that can match empty",
+   "pattern": "^(?<amount>\\d*){0,0}x$",
+   "match": [
+    "x"
+   ],
+   "noMatch": [
+    "1x"
+   ],
+   "groups": [
+    {
+     "text": "x",
+     "named": {
+      "amount": null
+     }
+    }
+   ]
+  },
+  {
+   "construct": "empty-match rule: {1,1}? on a group that can match empty",
+   "pattern": "^(?:(?<amount>\\d*)){1,1}?$",
+   "match": [
+    "12",
+    ""
+   ],
+   "noMatch": [
+    "a"
+   ],
+   "groups": [
+    {
+     "text": "12",
+     "named": {
+      "amount": "12"
+     }
+    }
+   ]
+  },
+  {
+   "construct": "empty-match rule: {1} on a group that can match empty (exactly once; bounds read as numbers, T2.34)",
+   "pattern": "^(?:a*){1}x$",
+   "match": [
+    "x",
+    "aax"
+   ],
+   "noMatch": [
+    "xa"
+   ]
+  },
+  {
+   "construct": "empty-match rule: {1,1} on a group that can match empty (exactly once; bounds read as numbers, T2.34)",
+   "pattern": "^(?:a*){1,1}x$",
+   "match": [
+    "x",
+    "aax"
+   ],
+   "noMatch": [
+    "xa"
+   ]
+  },
+  {
+   "construct": "empty-match rule: {1}? on a group that can match empty (exactly once; bounds read as numbers, T2.34)",
+   "pattern": "^(?:a*){1}?x$",
+   "match": [
+    "x",
+    "aax"
+   ],
+   "noMatch": [
+    "xa"
+   ]
+  },
+  {
+   "construct": "empty-match rule: {1,1}? on a group that can match empty (exactly once; bounds read as numbers, T2.34)",
+   "pattern": "^(?:a*){1,1}?x$",
+   "match": [
+    "x",
+    "aax"
+   ],
+   "noMatch": [
+    "xa"
+   ]
+  },
+  {
+   "construct": "empty-match rule: {01} on a group that can match empty (exactly once; bounds read as numbers, T2.34)",
+   "pattern": "^(?:a*){01}x$",
+   "match": [
+    "x",
+    "aax"
+   ],
+   "noMatch": [
+    "xa"
+   ]
+  },
+  {
+   "construct": "empty-match rule: {001,01} on a group that can match empty (exactly once; bounds read as numbers, T2.34)",
+   "pattern": "^(?:a*){001,01}x$",
+   "match": [
+    "x",
+    "aax"
+   ],
+   "noMatch": [
+    "xa"
+   ]
+  },
+  {
+   "construct": "empty-match rule: {0} on a group that can match empty (exactly never; bounds read as numbers, T2.34)",
+   "pattern": "^(?:a*){0}x$",
+   "match": [
+    "x"
+   ],
+   "noMatch": [
+    "ax"
+   ]
+  },
+  {
+   "construct": "empty-match rule: {0,0} on a group that can match empty (exactly never; bounds read as numbers, T2.34)",
+   "pattern": "^(?:a*){0,0}x$",
+   "match": [
+    "x"
+   ],
+   "noMatch": [
+    "ax"
+   ]
+  },
+  {
+   "construct": "empty-match rule: {0}? on a group that can match empty (exactly never; bounds read as numbers, T2.34)",
+   "pattern": "^(?:a*){0}?x$",
+   "match": [
+    "x"
+   ],
+   "noMatch": [
+    "ax"
+   ]
+  },
+  {
+   "construct": "empty-match rule: {0,0}? on a group that can match empty (exactly never; bounds read as numbers, T2.34)",
+   "pattern": "^(?:a*){0,0}?x$",
+   "match": [
+    "x"
+   ],
+   "noMatch": [
+    "ax"
+   ]
+  },
+  {
+   "construct": "empty-match rule: {00} on a group that can match empty (exactly never; bounds read as numbers, T2.34)",
+   "pattern": "^(?:a*){00}x$",
+   "match": [
+    "x"
+   ],
+   "noMatch": [
+    "ax"
+   ]
+  },
+  {
+   "construct": "empty-match rule: {00,0} on a group that can match empty (exactly never; bounds read as numbers, T2.34)",
+   "pattern": "^(?:a*){00,0}x$",
+   "match": [
+    "x"
+   ],
+   "noMatch": [
+    "ax"
+   ]
+  },
+  {
+   "construct": "leading zeros (T2.34): {01} is {1}",
+   "pattern": "^(?:\\d?){01}x$",
+   "match": [
+    "x",
+    "5x"
+   ],
+   "noMatch": [
+    "55x"
+   ]
+  },
+  {
+   "construct": "empty-match rule: a lookahead takes {1}",
+   "pattern": "^(?=\\d){1}(?<amount>\\d+)$",
+   "match": [
+    "12"
+   ],
+   "noMatch": [
+    "a"
+   ],
+   "groups": [
+    {
+     "text": "12",
+     "named": {
+      "amount": "12"
+     }
+    }
+   ]
+  },
+  {
+   "construct": "empty-match rule: no alternative can match empty",
+   "pattern": "^(?:a|b)+$",
+   "match": [
+    "ab"
+   ],
+   "noMatch": [
+    ""
+   ]
+  },
+  {
+   "construct": "empty-match rule: a quantified item with a minimum above 0",
+   "pattern": "^(?:a{1,2})+$",
+   "match": [
+    "aaa"
+   ],
+   "noMatch": [
+    ""
+   ]
+  },
+  {
+   "construct": "empty-match rule: every alternative holds a character",
+   "pattern": "^(?:a?b*c)+$",
+   "match": [
+    "cbc",
+    "abbc"
+   ],
+   "noMatch": [
+    "ab"
+   ]
+  },
+  {
+   "construct": "empty-match rule: an item with minimum 1 that can't match empty",
+   "pattern": "^(?:a+b{1,2})+$",
+   "match": [
+    "abab"
+   ],
+   "noMatch": [
+    "a"
+   ]
+  },
+  {
+   "construct": "empty-match rule: an inner group taken {1} next to a character",
+   "pattern": "^(?:a(?:b?){1})+$",
+   "match": [
+    "aab"
+   ],
+   "noMatch": [
+    "b"
+   ]
+  },
+  {
+   "construct": "empty-match rule: characters, ., escapes and classes can't match empty",
+   "pattern": "^(?:.)+(?:\\d)+(?:[a])+(?:\\.)+(?:\\x41)+$",
+   "match": [
+    "x1a.A"
+   ],
+   "noMatch": [
+    "x1a."
+   ]
+  },
+  {
+   "construct": "empty-match rule: an optional group that always holds a character, as in the official templates",
+   "pattern": "^(?:(?<amount>[\\d,]+) ریال)?(?<kind>واریز|برداشت)$",
+   "match": [
+    "1,000 ریالواریز",
+    "برداشت"
+   ],
+   "noMatch": [
+    "ریالواریز"
+   ],
+   "groups": [
+    {
+     "text": "1,000 ریالواریز",
+     "named": {
+      "amount": "1,000",
+      "kind": "واریز"
+     }
+    },
+    {
+     "text": "برداشت",
+     "named": {
+      "amount": null,
+      "kind": "برداشت"
+     }
+    }
+   ]
+  },
+  {
+   "construct": "empty-match rule: an optional line, as in the official templates",
+   "pattern": "^(?:حساب:(?<account>\\d+)\\n)?مبلغ:(?<amount>[\\d,]+)$",
+   "match": [
+    "حساب:12\nمبلغ:5",
+    "مبلغ:5"
+   ],
+   "noMatch": [
+    "حساب:\nمبلغ:5"
+   ],
+   "groups": [
+    {
+     "text": "حساب:12\nمبلغ:5",
+     "named": {
+      "account": "12",
+      "amount": "5"
+     }
+    },
+    {
+     "text": "مبلغ:5",
+     "named": {
+      "account": null,
+      "amount": "5"
+     }
+    }
+   ]
+  },
+  {
+   "construct": "lookahead rule (T2.23): an unnamed group in a lookahead",
+   "pattern": "^(?!(?:x))(?<amount>\\d+)$",
+   "match": [
+    "12"
+   ],
+   "noMatch": [
+    "x"
+   ],
+   "groups": [
+    {
+     "text": "12",
+     "named": {
+      "amount": "12"
+     }
+    }
+   ]
+  },
+  {
+   "construct": "lookahead rule: a lookahead inside a named group",
+   "pattern": "^(?<amount>(?=\\d)\\d+)$",
+   "match": [
+    "12"
+   ],
+   "noMatch": [
+    "a"
+   ],
+   "groups": [
+    {
+     "text": "12",
+     "named": {
+      "amount": "12"
+     }
+    }
+   ]
+  },
+  {
+   "construct": "lookahead rule: lookaheads before and after a named group",
+   "pattern": "^(?=\\d)(?<amount>\\d+)(?!x)$",
+   "match": [
+    "12"
+   ],
+   "noMatch": [
+    "a1"
+   ],
+   "groups": [
+    {
+     "text": "12",
+     "named": {
+      "amount": "12"
+     }
+    }
+   ]
+  },
+  {
+   "construct": "lookahead rule: REQ-PT-005's guard holds unnamed groups only",
+   "pattern": "^(?![\\s\\S]*(?:واریز|نشست|\\d\\+|\\+\\d))رمز (?<amount>\\d+)$",
+   "match": [
+    "رمز 12"
+   ],
+   "noMatch": [
+    "رمز x"
+   ],
+   "groups": [
+    {
+     "text": "رمز 12",
+     "named": {
+      "amount": "12"
+     }
+    }
+   ]
+  },
+  {
+   "construct": "lookahead rule: a plain group in a lookahead is numbered before the named group",
+   "pattern": "^(?=(\\d))(?<amount>\\d+)$",
+   "match": [
+    "12"
+   ],
+   "noMatch": [
+    "a"
+   ],
+   "groups": [
+    {
+     "text": "12",
+     "named": {
+      "amount": "12"
+     }
+    }
+   ]
   }
  ],
  "refused": [
@@ -1754,6 +2280,542 @@
    "tokens": [
     "\\d-z",
     "\\w"
+   ]
+  },
+  {
+   "pattern": "^(?<amount>\\d?)+$",
+   "tokens": [
+    "+"
+   ]
+  },
+  {
+   "pattern": "^(?<amount>\\d*)*$",
+   "tokens": [
+    "*"
+   ]
+  },
+  {
+   "pattern": "^(?:(?<amount>\\d*))?$",
+   "tokens": [
+    "?"
+   ]
+  },
+  {
+   "pattern": "^(?<account>|[0-9,]){2}.$",
+   "tokens": [
+    "{2}"
+   ]
+  },
+  {
+   "pattern": "^(?:|(?<amount>\\d+))?\\d*x$",
+   "tokens": [
+    "?"
+   ]
+  },
+  {
+   "pattern": "^(?:\\d??){1,3}(?<amount>\\d+)$",
+   "tokens": [
+    "{1,3}"
+   ]
+  },
+  {
+   "pattern": "^(?:(?<amount>\\d+)|)?x$",
+   "tokens": [
+    "?"
+   ]
+  },
+  {
+   "pattern": "^(?:(?<amount>\\d*)y?)?x$",
+   "tokens": [
+    "?"
+   ]
+  },
+  {
+   "pattern": "^(?:(?=(?<amount>\\d+)))?\\d+$",
+   "tokens": [
+    "(?<amount>",
+    "?"
+   ]
+  },
+  {
+   "pattern": "^(?<amount>\\d?)??$",
+   "tokens": [
+    "??"
+   ]
+  },
+  {
+   "pattern": "^(?=(?<amount>\\d+))?\\d+$",
+   "tokens": [
+    "(?<amount>",
+    "?"
+   ]
+  },
+  {
+   "pattern": "^(?<amount>(?:|\\d){1,1}){2}?[0-9,]$",
+   "tokens": [
+    "{2}?"
+   ]
+  },
+  {
+   "pattern": "^(?:\\d*?)+(?<amount>\\d+)$",
+   "tokens": [
+    "+"
+   ]
+  },
+  {
+   "pattern": "^(?:a*)?x$",
+   "tokens": [
+    "?"
+   ]
+  },
+  {
+   "pattern": "^(?:a*)*x$",
+   "tokens": [
+    "*"
+   ]
+  },
+  {
+   "pattern": "^(?:a*)+x$",
+   "tokens": [
+    "+"
+   ]
+  },
+  {
+   "pattern": "^(?:a*){2}x$",
+   "tokens": [
+    "{2}"
+   ]
+  },
+  {
+   "pattern": "^(?:a*){3}x$",
+   "tokens": [
+    "{3}"
+   ]
+  },
+  {
+   "pattern": "^(?:a*){0,}x$",
+   "tokens": [
+    "{0,}"
+   ]
+  },
+  {
+   "pattern": "^(?:a*){1,}x$",
+   "tokens": [
+    "{1,}"
+   ]
+  },
+  {
+   "pattern": "^(?:a*){2,}x$",
+   "tokens": [
+    "{2,}"
+   ]
+  },
+  {
+   "pattern": "^(?:a*){0,1}x$",
+   "tokens": [
+    "{0,1}"
+   ]
+  },
+  {
+   "pattern": "^(?:a*){0,2}x$",
+   "tokens": [
+    "{0,2}"
+   ]
+  },
+  {
+   "pattern": "^(?:a*){1,3}x$",
+   "tokens": [
+    "{1,3}"
+   ]
+  },
+  {
+   "pattern": "^(?:a*){2,2}x$",
+   "tokens": [
+    "{2,2}"
+   ]
+  },
+  {
+   "pattern": "^(?:a*)??x$",
+   "tokens": [
+    "??"
+   ]
+  },
+  {
+   "pattern": "^(?:a*)*?x$",
+   "tokens": [
+    "*?"
+   ]
+  },
+  {
+   "pattern": "^(?:a*)+?x$",
+   "tokens": [
+    "+?"
+   ]
+  },
+  {
+   "pattern": "^(?:a*){2}?x$",
+   "tokens": [
+    "{2}?"
+   ]
+  },
+  {
+   "pattern": "^(?:a*){1,3}?x$",
+   "tokens": [
+    "{1,3}?"
+   ]
+  },
+  {
+   "pattern": "^(?:a*){0,1}?x$",
+   "tokens": [
+    "{0,1}?"
+   ]
+  },
+  {
+   "pattern": "^(?:a*){1,}?x$",
+   "tokens": [
+    "{1,}?"
+   ]
+  },
+  {
+   "pattern": "^(?:\\d?){0,01}x$",
+   "tokens": [
+    "{0,01}"
+   ]
+  },
+  {
+   "pattern": "^(?:\\d?){02}x$",
+   "tokens": [
+    "{02}"
+   ]
+  },
+  {
+   "pattern": "^(?:a?)?+x$",
+   "tokens": [
+    "?+"
+   ]
+  },
+  {
+   "pattern": "^(?:a?)*+x$",
+   "tokens": [
+    "*+"
+   ]
+  },
+  {
+   "pattern": "^(?:a?){2}+x$",
+   "tokens": [
+    "}+"
+   ]
+  },
+  {
+   "pattern": "^\\w(?:a?)*\\b(?:|b)+$",
+   "tokens": [
+    "\\w",
+    "*",
+    "\\b",
+    "+"
+   ]
+  },
+  {
+   "pattern": "^(?<amount>\\d*)?x$",
+   "tokens": [
+    "?"
+   ]
+  },
+  {
+   "pattern": "^(?:x(?:a*)+)y$",
+   "tokens": [
+    "+"
+   ]
+  },
+  {
+   "pattern": "^(?:(?:a?)*b)+$",
+   "tokens": [
+    "*"
+   ]
+  },
+  {
+   "pattern": "^(?:(?<amount>\\d*))+$",
+   "tokens": [
+    "(?<amount>",
+    "+"
+   ]
+  },
+  {
+   "pattern": "^(?:(?<amount>\\d*),?)*$",
+   "tokens": [
+    "(?<amount>",
+    "*"
+   ]
+  },
+  {
+   "pattern": "^(?:\\w)+$",
+   "tokens": [
+    "\\w"
+   ]
+  },
+  {
+   "pattern": "^(?:\\b)*a$",
+   "tokens": [
+    "\\b"
+   ]
+  },
+  {
+   "pattern": "^(?:{x})+$",
+   "tokens": [
+    "{x}"
+   ]
+  },
+  {
+   "pattern": "^(?:])+$",
+   "tokens": [
+    "]"
+   ]
+  },
+  {
+   "pattern": "^(?:})+$",
+   "tokens": [
+    "}"
+   ]
+  },
+  {
+   "pattern": "^(?=a)*a$",
+   "tokens": [
+    "*"
+   ]
+  },
+  {
+   "pattern": "^(?!b){2}a$",
+   "tokens": [
+    "{2}"
+   ]
+  },
+  {
+   "pattern": "^(?:(?!b))+a$",
+   "tokens": [
+    "+"
+   ]
+  },
+  {
+   "pattern": "^(?:^)+a$",
+   "tokens": [
+    "^",
+    "+"
+   ]
+  },
+  {
+   "pattern": "^(?:a$)+$",
+   "tokens": [
+    "$"
+   ]
+  },
+  {
+   "pattern": "^(?:$)+a$",
+   "tokens": [
+    "$",
+    "+"
+   ]
+  },
+  {
+   "pattern": "^(?:x^)+a$",
+   "tokens": [
+    "^"
+   ]
+  },
+  {
+   "pattern": "^(?:(?<=a))+a$",
+   "tokens": [
+    "(?<=",
+    "+"
+   ]
+  },
+  {
+   "pattern": "^(?<=a)+a$",
+   "tokens": [
+    "(?<=",
+    "+"
+   ]
+  },
+  {
+   "pattern": "^(?:(?i))+a$",
+   "tokens": [
+    "(?i)",
+    "+"
+   ]
+  },
+  {
+   "pattern": "^(?:x(?i))+a$",
+   "tokens": [
+    "(?i)"
+   ]
+  },
+  {
+   "pattern": "^(?:a{0,2})+$",
+   "tokens": [
+    "+"
+   ]
+  },
+  {
+   "pattern": "^(?:a{0})+$",
+   "tokens": [
+    "+"
+   ]
+  },
+  {
+   "pattern": "^(?:(?:a?){2})+$",
+   "tokens": [
+    "{2}",
+    "+"
+   ]
+  },
+  {
+   "pattern": "^(?:(?:a?){1})+$",
+   "tokens": [
+    "+"
+   ]
+  },
+  {
+   "pattern": "^(?:(?:ab){0})+$",
+   "tokens": [
+    "+"
+   ]
+  },
+  {
+   "pattern": "^(?>a?)+$",
+   "tokens": [
+    "(?>",
+    "+"
+   ]
+  },
+  {
+   "pattern": "^(?i:a|)+$",
+   "tokens": [
+    "(?i:",
+    "+"
+   ]
+  },
+  {
+   "pattern": "^(?i:a)+$",
+   "tokens": [
+    "(?i:"
+   ]
+  },
+  {
+   "pattern": "^(?:a|b|)+$",
+   "tokens": [
+    "+"
+   ]
+  },
+  {
+   "pattern": "^(?:|a)+$",
+   "tokens": [
+    "+"
+   ]
+  },
+  {
+   "pattern": "^(?:a?b*(?:c|))+$",
+   "tokens": [
+    "+"
+   ]
+  },
+  {
+   "pattern": "^(?:(?=(?<amount>\\d+))x|\\d+)$",
+   "tokens": [
+    "(?<amount>"
+   ]
+  },
+  {
+   "pattern": "^(?=(?:(?<amount>\\d+)|)?)\\d+$",
+   "tokens": [
+    "(?<amount>",
+    "?"
+   ]
+  },
+  {
+   "pattern": "^a??(?!(?<account>a))b(?<amount>\\d)$",
+   "tokens": [
+    "(?<account>"
+   ]
+  },
+  {
+   "pattern": "^(?=(?<amount>\\d+))\\d+$",
+   "tokens": [
+    "(?<amount>"
+   ]
+  },
+  {
+   "pattern": "^(?!(?<kind>x))(?<amount>\\d+)$",
+   "tokens": [
+    "(?<kind>"
+   ]
+  },
+  {
+   "pattern": "^(?=(?:(?:(?<amount>\\d)))\\d)\\d\\d$",
+   "tokens": [
+    "(?<amount>"
+   ]
+  },
+  {
+   "pattern": "^(?=x(?!(?:y|(?<sign>z))))x(?<amount>\\d)$",
+   "tokens": [
+    "(?<sign>"
+   ]
+  },
+  {
+   "pattern": "^(?=(?<account>\\d)(?<amount>\\d))\\d\\d$",
+   "tokens": [
+    "(?<account>",
+    "(?<amount>"
+   ]
+  },
+  {
+   "pattern": "^(?:(?=(?<amount>\\d+)){1})\\d+$",
+   "tokens": [
+    "(?<amount>"
+   ]
+  },
+  {
+   "pattern": "^(?:(?=(?<amount>\\d*)))?\\d+$",
+   "tokens": [
+    "(?<amount>",
+    "?"
+   ]
+  },
+  {
+   "pattern": "^(?:(?=(?<amount>\\d+))\\d)+$",
+   "tokens": [
+    "(?<amount>"
+   ]
+  },
+  {
+   "pattern": "^(?<amount>\\d)(?=(?<amount>\\d))\\d$",
+   "tokens": [
+    "(?<amount>"
+   ]
+  },
+  {
+   "pattern": "^(?=(?<a_b>\\d))(?<amount>\\d)$",
+   "tokens": [
+    "(?<a_b>"
+   ]
+  },
+  {
+   "pattern": "^\\w(?=(?<amount>\\d))\\b\\d$",
+   "tokens": [
+    "\\w",
+    "(?<amount>",
+    "\\b"
+   ]
+  },
+  {
+   "pattern": "^(?<a)>b$",
+   "tokens": [
+    "(?<a)>"
+   ]
+  },
+  {
+   "pattern": "^(?<amount\\d+)x>$",
+   "tokens": [
+    "(?<amount\\d+)x>"
    ]
   }
  ],
