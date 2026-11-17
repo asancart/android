@@ -35,6 +35,22 @@ class DeviceRegexDialectTest {
     }
 
     @Test
+    fun groupsTextThatDoesNotMatchFailsOnIcu() {
+        // T4.24: the runner reports a groups text that doesn't match, also one whose groups are all null.
+        val cases = """{"allowed": [{"construct": "runner", "pattern": "^(?<amount>\\d+)x$", "match": ["1x"], "noMatch": ["1y"],
+            "groups": [{"text": "12x", "named": {"amount": "12"}}, {"text": "12y", "named": {"amount": "12"}}, {"text": "y", "named": {"amount": null}}]}],
+            "refused": [], "regex": []}"""
+        assertEquals(
+            listOf(
+                "allowed \"^(?<amount>\\d+)x$\": groups text \"12y\" doesn't match",
+                "allowed \"^(?<amount>\\d+)x$\": on \"12y\": group amount is null, expected \"12\"",
+                "allowed \"^(?<amount>\\d+)x$\": groups text \"y\" doesn't match",
+            ),
+            RegexDialectCases(cases).run().failures,
+        )
+    }
+
+    @Test
     fun persianAndDevanagariDigitsAreNotBackslashD() {
         // Why the rewrite exists: ICU's own \d takes any Unicode digit (logged, not asserted).
         val icu = Pattern.compile("\\d").matcher("\u06F5").matches()

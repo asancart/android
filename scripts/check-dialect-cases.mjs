@@ -2,7 +2,8 @@
 // JavaScript RegExp without the `u` flag, the admin engine's regex library, so the expectations
 // the Device engine is tested with are the admin engine's.
 //   allowed: compiles; each `match` text is a full match after REQ-DEV-050's always-on steps (it
-//            matches ^(?:P)$, as the admin engine's compileFullMatch), with the listed named groups;
+//            matches ^(?:P)$, as the admin engine's compileFullMatch), with the listed named groups,
+//            whose texts must match (T4.24);
 //            no `noMatch` text is. Flag i folds ASCII letters only (T2.18): the pattern is rewritten
 //            (k to [kK], [a-f] to [a-fA-F]) and compiled without RegExp's own i.
 //   regex:   RegExp refuses it.
@@ -107,10 +108,11 @@ for (const c of cases.allowed) {
   for (const t of c.match) if (!full(re, alwaysOn(t))) failures.push(`allowed ${show(c.pattern)}: ${show(t)} should match`);
   for (const t of c.noMatch) if (full(re, alwaysOn(t))) failures.push(`allowed ${show(c.pattern)}: ${show(t)} should not match`);
   for (const g of c.groups ?? []) {
+    // T4.24: a groups text must match; one that doesn't fails, and its groups compare as null.
     const m = full(re, alwaysOn(g.text));
-    if (!m) continue;
+    if (!m) failures.push(`allowed ${show(c.pattern)}: groups text ${show(g.text)} doesn't match`);
     for (const [k, v] of Object.entries(g.named)) {
-      const have = m.groups?.[k] ?? null;
+      const have = m?.groups?.[k] ?? null;
       if (have !== v) failures.push(`allowed ${show(c.pattern)} on ${show(g.text)}: group ${k} is ${show(have)}, expected ${show(v)}`);
     }
   }

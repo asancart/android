@@ -1,7 +1,7 @@
 {
  "about": [
   "REQ-DEV-041 regex dialect cases (asancart documents api/device-api.md: T2.15, T3.55, T2.16, T3.56, T2.17, T2.18, T2.19, T2.23, T2.32, T2.34), the shared case set every engine runs. Not SMS data.",
-  "allowed: inside the dialect; each text is matched after REQ-DEV-050's always-on steps, as a full match: the text matches ^(?:P)$ (REQ-DEV-041); groups lists named groups for some texts (null: did not take part).",
+  "allowed: inside the dialect; each text is matched after REQ-DEV-050's always-on steps, as a full match: the text matches ^(?:P)$ (REQ-DEV-041); groups lists named groups for some texts, each of which must match (T4.24; null: did not take part).",
   "flag i folds ASCII letters only (T2.18): every engine rewrites the pattern (k to [kK], [a-f] to [a-fA-F]) and compiles it without its own case-insensitive option.",
   "refused: outside the dialect; tokens are the code dialect details, one per distinct token, in order of first occurrence.",
   "empty-match rule (T2.19, T2.32): a group of any kind that can match the empty string takes only {1}, {1,1}, {0} or {0,0}, lazy or not, bounds read as numbers (T2.34); any other quantifier is refused, the quantifier as written as token. Lookahead rule (T2.23): a named group inside (?= or (?! is refused, its opener as token.",

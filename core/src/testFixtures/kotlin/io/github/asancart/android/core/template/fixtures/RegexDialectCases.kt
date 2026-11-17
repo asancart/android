@@ -55,10 +55,15 @@ class RegexDialectCases(json: String = resource()) {
             for (t in c.strings("noMatch")) if (r.matchWhole(Normalizer.alwaysOn(t)) != null) bad("${show(t)} should not match")
             for (g in (c["groups"] as? JsonArray).orEmpty()) {
                 val text = g.jsonObject.string("text")!!
-                val m = r.matchWhole(Normalizer.alwaysOn(text)) ?: continue
+                // T4.24: a groups text must match. One that doesn't is a failure, also when every listed
+                // group is null; its groups are then compared as null, as the admin engine's and the
+                // server port's copies do.
+                val m = r.matchWhole(Normalizer.alwaysOn(text))
+                if (m == null) bad("groups text ${show(text)} doesn't match")
                 for ((k, v) in g.jsonObject["named"]!!.jsonObject) {
                     val want = (v as? JsonPrimitive)?.takeUnless { it is JsonNull }?.content
-                    if (m[k] != want) bad("on ${show(text)}: group $k is ${m[k]?.let(::show)}, expected ${want?.let(::show)}")
+                    val got = m?.get(k)
+                    if (got != want) bad("on ${show(text)}: group $k is ${got?.let(::show)}, expected ${want?.let(::show)}")
                 }
             }
             val errors = schemaErrors(pattern, flags)
