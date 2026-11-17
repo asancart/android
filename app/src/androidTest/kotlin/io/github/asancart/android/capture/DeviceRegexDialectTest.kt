@@ -13,16 +13,19 @@ import io.github.asancart.android.core.template.fixtures.RegexDialectCases
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.util.regex.Pattern
+import java.util.regex.PatternSyntaxException
 
 /**
- * T4.17, T4.18-T4.20: REQ-DEV-041's regex dialect on the device's own `java.util.regex`, which is
- * ICU on Android. Every allowed construct (with its captures, the empty-match and lookahead rules'
- * allowed examples included), refused token and compile error of the shared case file, and `\d` as
- * `[0-9]` where ICU's own `\d` is every Unicode digit. No private data: runs in CI.
+ * T4.17, T4.18-T4.20, T4.24, T4.27: REQ-DEV-041's regex dialect on the device's own
+ * `java.util.regex`, which is ICU on Android. Every allowed construct (with its captures, the
+ * empty-match and lookahead rules' allowed examples included), refused token and compile error of
+ * the shared case file, bounds above ICU's own limit as `dialect`, and `\d` as `[0-9]` where ICU's
+ * own `\d` is every Unicode digit. No private data: runs in CI.
  */
 @RunWith(AndroidJUnit4::class)
 class DeviceRegexDialectTest {
@@ -31,7 +34,7 @@ class DeviceRegexDialectTest {
         val report = RegexDialectCases().run()
         Log.i("AsancartDialect", "API ${Build.VERSION.SDK_INT}: $report")
         assertTrue(report.toString(), report.failures.isEmpty())
-        assertTrue(report.toString(), report.allowed >= 103 && report.refused >= 220 && report.regex >= 7)
+        assertTrue(report.toString(), report.allowed >= 106 && report.refused >= 229 && report.regex >= 7)
     }
 
     @Test
@@ -61,6 +64,23 @@ class DeviceRegexDialectTest {
             assertNotNull(digit, PortableRegex.compile("^\\D$").matchWhole(digit))
         }
         assertNotNull(PortableRegex.compile("^\\d$").matchWhole("5"))
+    }
+
+    @Test
+    fun boundAboveIcuLimitIsDialectNotACompileError() {
+        // Why the bound rule exists (T2.59): ICU refuses a bound of 2^24 or more (logged, not asserted).
+        val icu = try {
+            Pattern.compile("^[0-9]{1,16777216}$")
+            "compiles"
+        } catch (e: PatternSyntaxException) {
+            "refuses: ${e.description}"
+        }
+        Log.i("AsancartDialect", "API ${Build.VERSION.SDK_INT}: ICU {1,16777216}: $icu")
+        for ((pattern, token) in listOf("^(?<amount>\\d{1,16777216})$" to "{1,16777216}", "^a{2147483648}$" to "{2147483648}")) {
+            val e = assertThrows(PortableRegex.DialectViolation::class.java) { PortableRegex.compile(pattern) }
+            assertEquals(listOf(token), e.tokens)
+        }
+        assertNotNull(PortableRegex.compile("^\\d{1,1000}$").matchWhole("1".repeat(1000)))
     }
 
     @Test

@@ -13,7 +13,9 @@ import java.util.regex.PatternSyntaxException
  * engines refuse or read differently, the check keeps a stack of open groups to refuse a named
  * group inside a group that can repeat (T3.56) or inside a lookahead (T2.23), and a quantifier
  * other than `{1}`, `{1,1}`, `{0}` or `{0,0}` on a group that can match the empty string (T2.32,
- * which replaces T2.19's empty-iteration rule; bounds read as numbers, T2.34).
+ * which replaces T2.19's empty-iteration rule; bounds read as numbers, T2.34). A quantifier bound
+ * above 1000 is refused on anything (T2.59), read without overflow, so no library's own limit is
+ * reached (ICU's is 2^24).
  *
  * Inside the dialect, the pattern is rewritten for `java.util.regex`, which on Android is ICU and
  * runs from API 24:
@@ -292,6 +294,18 @@ internal class DialectTranslator(private val src: String, private val foldAscii:
     private fun minimumZero(q: String): Boolean =
         if (q.startsWith("{")) q.substring(1).takeWhile { it in '0'..'9' }.all { it == '0' } else q != "+"
 
+    /**
+     * `{n}`, `{n,}` or `{n,m}` with n or m above 1000 (T2.59), n > m included. Each bound is read as a
+     * number without overflow: leading zeros dropped, more than four digits is above 1000, so
+     * `{00000000000000000001000}` is 1000. ICU refuses a bound of 2^24 or more and the JDK one above
+     * 2^31 - 1, while JavaScript takes any; the check runs before any library sees one.
+     */
+    private fun aboveMaxBound(q: String): Boolean =
+        q.startsWith("{") && q.substring(1, q.length - 1).split(',').any { b ->
+            val digits = b.trimStart('0')
+            digits.length > 4 || (digits.isNotEmpty() && digits.toInt() > MAX_BOUND)
+        }
+
     /** The quantifier at [at] (without a lazy or possessive mark), or null. */
     private fun quantifierAt(at: Int): String? = when (src.getOrNull(at)) {
         '*', '+', '?' -> src.substring(at, at + 1)
@@ -316,6 +330,9 @@ internal class DialectTranslator(private val src: String, private val foldAscii:
         out.append(q)
         val at = i
         i += len
+        // T2.59: a bound above 1000, on anything, n > m included. The quantifier as written, a lazy `?`
+        // included, in its own place; a possessive one is refused as possessive only (below).
+        if (aboveMaxBound(q) && src.getOrNull(i) != '+') report(at, if (src.getOrNull(i) == '?') "$q?" else q)
         if (i < src.length && src[i] == '?') {
             out.append('?')
             i++
@@ -585,6 +602,9 @@ internal class DialectTranslator(private val src: String, private val foldAscii:
     }
 
     private companion object {
+        /** The largest quantifier bound the dialect takes (T2.59). */
+        const val MAX_BOUND = 1000
+
         /** Escaped metacharacters of the dialect. */
         const val METACHARACTERS = ".\\/-()[]{}*+?|^$"
 

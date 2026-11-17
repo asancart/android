@@ -7,10 +7,10 @@ import kotlin.test.assertNotNull
 
 /**
  * REQ-DEV-041's empty-match rule (T2.32, which replaces T2.19's empty-iteration rule; bounds read as
- * numbers, T2.34) and lookahead rule (T2.23), as device-api.md states them. The doc's examples
- * first, then the admin engine's and the server port's own cases (frontend `dialectRules.test.ts`,
- * backend `EmptyMatchRuleTest`, `LookaheadRuleTest`). The shared `regex-dialect-cases.json` holds
- * them too, for every engine, on the JVM and on ICU.
+ * numbers, T2.34), lookahead rule (T2.23) and bound rule (T2.59), as device-api.md states them. The
+ * doc's examples first, then the admin engine's and the server port's own cases (frontend
+ * `dialectRules.test.ts`, backend `EmptyMatchRuleTest`, `LookaheadRuleTest`, `BoundRuleTest`). The
+ * shared `regex-dialect-cases.json` holds them too, for every engine, on the JVM and on ICU.
  */
 class DialectRulesTest {
     private val amount = "(?<amount>"
@@ -221,5 +221,80 @@ class DialectRulesTest {
         allowed("^(?=\\d){1}(?<amount>\\d+)$", "12", "amount" to "12")
         allowed("^(?!a){0}a(?<amount>\\d)$", "a1", "amount" to "1")
         allowed("^(?=(\\d)){1,1}?(?<amount>\\d+)$", "12", "amount" to "12")
+    }
+
+    @Test
+    fun `bound rule - the doc's refused examples, the quantifier as written as token (T2-59)`() {
+        refused("^(?<amount>\\d{1,16777216})$", "{1,16777216}")
+        refused("^\\d{1001}$", "{1001}")
+        refused("^\\d{1001,}$", "{1001,}")
+        refused("^\\d{0,1001}?$", "{0,1001}?")
+        refused("^a{2147483648}$", "{2147483648}")
+        refused("^\\d{2000,1}$", "{2000,1}") // n > m: dialect, not regex
+        refused("^\\d{00000000000000000001001}$", "{00000000000000000001001}")
+    }
+
+    @Test
+    fun `bound rule - the doc's allowed examples`() {
+        allowed("^(?<amount>\\d{1,1000})$", "123", "amount" to "123")
+        allowed("^\\d{0,01000}x$", "x")
+        allowed("^\\d{0,01000}x$", "12x")
+        allowed("^(?:\\d{1000})?x$", "x")
+        assertEquals(null, PortableRegex.compile("^(?:\\d{1000})?x$").matchWhole("1x"))
+        allowed("^\\d{00000000000000000001000}x$", "1".repeat(1000) + "x")
+        allowed("^\\d{1000}$", "1".repeat(1000))
+        assertEquals(null, PortableRegex.compile("^\\d{1000}$").matchWhole("1".repeat(1001)))
+    }
+
+    @Test
+    fun `bound rule - with the other quantifier rules, one token each`() {
+        // A possessive one is refused as possessive only.
+        refused("^\\d{1001}+$", "}+")
+        refused("^\\d{0,1001}+$", "}+")
+        // Nothing to repeat: that rule's token alone; the ? after it is a quantifier of its own.
+        refused("^{1001}?a$", "{1001}", "?")
+        refused("^(?:{2000})a$", "{2000}")
+        // The empty-match rule refuses the same quantifier: one token.
+        refused("^(?:\\d?){1001}x$", "{1001}")
+        refused("^(?:\\d?){1001}?x$", "{1001}?")
+        refused("^(?=\\d){1001}\\d$", "{1001}")
+        // With T3.56 and other tokens, each in its place.
+        refused("^(?:(?<amount>\\d)x){1001}$", amount, "{1001}")
+        refused("^\\w{1001}a{2,1002}\\b$", "\\w", "{1001}", "{2,1002}", "\\b")
+    }
+
+    @Test
+    fun `bound rule - on anything`() {
+        refused("^.{1001}$", "{1001}")
+        refused("^[0-9]{1,1001}$", "{1,1001}")
+        refused("^(?:ab){1001,}$", "{1001,}")
+        refused("^(?<amount>\\d){5000}$", "{5000}")
+        refused("^\\x41{9999}$", "{9999}")
+        refused("^a{1001,1002}$", "{1001,1002}")
+        refused("^a{0,10000}$", "{0,10000}")
+        refused("^a{x}{1001}$", "{x}", "{1001}") // a refused {..} is something to repeat
+    }
+
+    @Test
+    fun `bound rule - bounds are read as numbers, without overflow`() {
+        for (q in listOf("{1000}", "{01000}", "{0001000}", "{00000000000000000001000}", "{0,1000}", "{1000,}", "{999,1000}", "{0}", "{000000000000000000000}")) {
+            inside("^a$q$")
+        }
+        for (q in listOf("{1001}", "{01001}", "{10000}", "{99999999999999999999}", "{0,1001}", "{0,000000000000000001001}", "{1001,}", "{1,2147483648}", "{9223372036854775808}")) {
+            refused("^a$q$", q)
+            refused("^a$q?$", "$q?")
+        }
+        // n > m at or below 1000 is inside the dialect and doesn't compile (code regex), as before.
+        inside("^\\d{3,1}$")
+        inside("^\\d{1000,999}$")
+        assertFailsWith<PortableRegex.InvalidPattern> { PortableRegex.compile("^\\d{3,1}$") }
+        refused("^\\d{1001,1}$", "{1001,1}")
+    }
+
+    @Test
+    fun `bound rule - every allowed bound compiles and matches on this platform`() {
+        for (q in listOf("{1000}", "{0,1000}", "{1000,}", "{00000000000000000001000}", "{1,1000}?")) {
+            assertNotNull(PortableRegex.compile("^a$q$").matchWhole("a".repeat(1000)), q)
+        }
     }
 }
