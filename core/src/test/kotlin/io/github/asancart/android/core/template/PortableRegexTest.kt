@@ -20,7 +20,7 @@ class PortableRegexTest {
         val report = RegexDialectCases().run()
         println(report)
         assertTrue(report.failures.isEmpty(), report.toString())
-        assertTrue(report.allowed >= 107 && report.refused >= 239 && report.regex >= 7, report.toString())
+        assertTrue(report.allowed >= 112 && report.refused >= 253 && report.regex >= 8, report.toString())
     }
 
     @Test

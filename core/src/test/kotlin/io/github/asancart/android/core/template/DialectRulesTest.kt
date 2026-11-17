@@ -4,11 +4,12 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 /**
  * REQ-DEV-041's empty-match rule (T2.32, which replaces T2.19's empty-iteration rule; bounds read as
- * numbers, T2.34), lookahead rule (T2.23), bound rule (T2.59) and exactly-once rule (T2.58), as
- * device-api.md states them. The doc's examples first, then the admin engine's and the server
+ * numbers, T2.34), lookahead rule (T2.23), bound rule (T2.59), exactly-once rule (T2.58) and loop
+ * rule (T2.60, T2.66), as device-api.md states them. The doc's examples first, then the admin engine's and the server
  * port's own cases (frontend `dialectRules.test.ts`, backend `EmptyMatchRuleTest`,
  * `LookaheadRuleTest`, `BoundRuleTest`). The shared `regex-dialect-cases.json` holds them too, for
  * every engine, on the JVM and on ICU.
@@ -105,7 +106,7 @@ class DialectRulesTest {
     fun `empty-match rule - named or not, inside another group or not`() {
         refused("^(?<amount>\\d*)?x$", "?")
         refused("^(?:x(?:a*)+)y$", "+")
-        refused("^(?:(?:a?)*b)+$", "*") // the outer group always holds b
+        refused("^(?:(?:a?)*b)+$", "*", "+") // the outer group always holds b; the loop rule refuses its + (T2.60)
         refused("^(?<kind>a?b?)+$", "+")
         // With T3.56 (a named group inside a group that repeats): both tokens, each in its place.
         refused("^(?:(?<amount>\\d*))+$", amount, "+")
@@ -142,8 +143,9 @@ class DialectRulesTest {
         refused("^(?:a{0,2})+$", "+")
         refused("^(?:a{0})+$", "+")
         refused("^(?:a{00,3})+$", "+")
-        inside("^(?:a{1,2})+$")
-        inside("^(?:a+b{1,2})+$")
+        // These two can't match empty; the loop rule refuses them (T2.60: no delimiting character).
+        refused("^(?:a{1,2})+$", "+")
+        refused("^(?:a+b{1,2})+$", "+")
         refused("^(?:(?:a?){2})+$", "{2}", "+") // the inner group is refused, and as an item it can
         refused("^(?:(?:a?){1})+$", "+")
         refused("^(?:(?:ab){0})+$", "+")
@@ -154,10 +156,11 @@ class DialectRulesTest {
         refused("^(?i:a)+$", "(?i:")
         refused("^(?:a|b|)+$", "+")
         refused("^(?:|a)+$", "+")
-        inside("^(?:a|b)+$")
+        refused("^(?:a|b)+$", "+") // can't match empty; refused by the loop rule (T2.60: |)
         // An alternative can when every item in it can.
         refused("^(?:a?b*(?:c|))+$", "+")
-        inside("^(?:a?b*c)+$")
+        refused("^(?:a?b*c)+$", "+") // can't match empty; refused by the loop rule (T2.60)
+        inside("^(?:,a?bc)+$") // delimited by the comma (T2.60)
     }
 
     @Test
@@ -197,7 +200,7 @@ class DialectRulesTest {
     @Test
     fun `lookahead rule - an opener several rules refuse is one token`() {
         refused("^(?:(?=(?<amount>\\d*)))?\\d+$", amount, "?") // lookahead; the quantified group can match empty (T2.32)
-        refused("^(?:(?=(?<amount>\\d+))\\d)+$", amount) // lookahead and a group that can repeat
+        refused("^(?:(?=(?<amount>\\d+))\\d)+$", amount, "+") // lookahead and a group that can repeat; + by T2.60
         refused("^(?<amount>\\d)(?=(?<amount>\\d))\\d$", amount) // lookahead and a reused name
         refused("^(?=(?<a_b>\\d))(?<amount>\\d)$", "(?<a_b>") // a bad name: its own token
         refused("^\\w(?=(?<amount>\\d))\\b\\d$", "\\w", amount, "\\b") // with other tokens, in the openers' order
@@ -341,5 +344,129 @@ class DialectRulesTest {
         refused("^(?:x(?<amount>\\d)){1}+$", amount, "}+")
         // A lookahead quantified {1}: the lookahead rule and this one refuse the same opener, one token.
         refused("^(?:(?=(?<amount>\\d+)){1})\\d+$", amount)
+    }
+
+    /** Inside the dialect, and [text] doesn't match. */
+    private fun noMatch(pattern: String, text: String, flags: String = "") {
+        assertEquals(emptyList(), PortableRegex.dialectViolations(pattern), pattern)
+        assertEquals(null, PortableRegex.compile(pattern, flags).matchWhole(text), "$pattern on $text")
+    }
+
+    @Test
+    fun `loop rule - the doc's refused examples, the quantifier as written as token (T2-60)`() {
+        refused("^\\D(?<amount>[\\d,۰-۹]+){1,}?$", "{1,}?")
+        refused("^(?<amount>[\\d,]+){10}$", "{10}")
+        refused("^(?:\\d{1,3})+$", "+") // no delimiting character
+        refused("^(?:\\d|\\d)*x$", "*") // |
+        refused("^(?:a|b)+$", "+")
+        refused("^(?:\\d+,?)+$", "+") // two variable quantifiers
+        refused("^(?:.*\\n)*x$", "*") // . matches \n
+        refused("^(?:K[^k]+)+$", "+") // [^k] matches K without i
+        refused("^(?:-[a\\-c]*)+$", "+") // [a\-c] matches - (T2.66)
+        refused("^(?:\\.\\d+\\.)+$", "+") // the delimiting character appears twice
+        refused("^(?:a+)++$", "++") // possessive only
+        // qa-32's stall on ICU only, with flag i.
+        refused("^(K|(?<amount>[\\d,۰-۹]+){2,})\\/*[^\\s]$", "{2,}")
+    }
+
+    @Test
+    fun `loop rule - the doc's allowed examples, with texts that match and texts that don't`() {
+        allowed("^\\d+(?:\\.\\d+)+$", "12.34.5")
+        noMatch("^\\d+(?:\\.\\d+)+$", "1..2")
+        allowed("^(?:\\.\\d+)+$", ".1.22")
+        allowed("^(?:[^\\n]*\\n)*x$", "ab\n\nx")
+        noMatch("^(?:[^\\n]*\\n)*x$", "ab\nxy")
+        allowed("^(?:,\\d+){0,3}$", ",1,22,333")
+        noMatch("^(?:,\\d+){0,3}$", ",1,2,3,4")
+        allowed("^(?:k[^k]+)+$", "kKa")
+        noMatch("^(?:k[^k]+)+$", "Kab")
+        assertNotNull(PortableRegex.compile("^(?:k[^k]+)+$", "i").matchWhole("KaKb"))
+        assertEquals(null, PortableRegex.compile("^(?:k[^k]+)+$", "i").matchWhole("kKa"))
+        allowed("^(?:\\d{3},)*\\d{3}$", "123,456,789")
+        noMatch("^(?:\\d{3},)*\\d{3}$", "12,345")
+        allowed("^(?:ab)+$", "abab")
+        allowed("^(?<amount>\\d)+$", "123", "amount" to "3")
+        allowed("^(?:b[a\\-c]*)+$", "bac-") // [a\-c] is a, - and c (T2.66)
+        noMatch("^(?:b[a\\-c]*)+$", "ab")
+    }
+
+    @Test
+    fun `loop rule - n greater than m is not a variable quantifier (T2-66)`() {
+        // A fixed group: inside the dialect, and {2,1} doesn't compile, code regex.
+        inside("^(?:a{2,1})+$")
+        val e = assertFailsWith<PortableRegex.InvalidPattern> { PortableRegex.compile("^(?:a{2,1})+$") }
+        assertTrue(e !is PortableRegex.DialectViolation)
+        // Above 1000 it is dialect by the bound rule alone.
+        refused("^(?:a{2000,1})+$", "{2000,1}")
+        // {n,m} with n < m varies; {n,n} doesn't, however written.
+        refused("^(?:\\d\\d{1,3})+$", "+")
+        inside("^(?:a{1,3}b)+$") // delimited by its last b
+        inside("^(?:a{3,003}b)+$")
+        inside("^(?:,a{1,3}b)+$")
+    }
+
+    @Test
+    fun `loop rule - which groups can repeat, by numeric value, named or in a lookahead`() {
+        for (q in listOf("*", "+", "{2}", "{02}", "{0,}", "{1,}", "{0,2}", "{1,2}", "{2,2}", "*?", "+?", "{2}?", "{1,}?")) refused("^(?:a|b)$q$", q)
+        for (q in listOf("?", "??", "{0}", "{1}", "{01}", "{0,1}", "{1,1}", "{0,0}", "{0,01}")) inside("^(?:a|b)$q$")
+        refused("^(?<kind>a|b)+$", "+")
+        refused("^(?=(?:a|b)+)a$", "+")
+        // Tokens in order, with other tokens; the empty-match rule refusing the same quantifier is one token.
+        refused("^(?:a|b)+\\w(?:c|d)*$", "+", "\\w", "*")
+        refused("^(?<amount>\\d?)+$", "+")
+        refused("^(?:(?<amount>\\d+)|x)*$", amount, "*")
+    }
+
+    @Test
+    fun `loop rule - inside counts nested groups and lookaheads, a group's own quantifier counts outside it`() {
+        inside("^(?:,(?:\\d+))+$")
+        refused("^(?:,(?:\\d+)?)+$", "+") // the inner + and the inner group's ?
+        refused("^(?:,(?:\\d|x))+$", "+") // a | at any depth
+        inside("^(?:,(?=\\d+)\\d)+$") // the lookahead's + is the one variable quantifier
+        refused("^(?:,(?=a|b)\\d+)+$", "+") // a | in a lookahead
+        refused("^(?:,(?=,)\\d+)+$", "+") // the lookahead's , matches the delimiter
+        // The inner group, fixed itself, makes the outer one vary.
+        refused("^(?:(?:ab)+a)+$", "+") // the inner a matches the last a
+        inside("^(?:(?:ab)+c)+$")
+    }
+
+    @Test
+    fun `loop rule - the delimiter is an unquantified literal character, first or last`() {
+        inside("^(?:\\d+,)+$") // last
+        inside("^(?:\\x41\\d+)+$") // \xhh
+        inside("^(?:\\u0041\\d+)+$")
+        inside("^(?:\\n[^\\n]*)*$") // \n
+        inside("^(?:\\t\\S+)+$")
+        inside("^(?: \\S+)+$")
+        refused("^(?:[,]\\d+)+$", "+") // a class is not a literal character
+        refused("^(?:\\D\\d+)+$", "+") // nor is \D
+        refused("^(?:.\\d+)+$", "+") // nor .
+        refused("^(?:,{2}\\d+)+$", "+") // a quantified one isn't a delimiter
+        refused("^(?:(?:,)\\d+)+$", "+") // nor is a group
+        inside("^(?:,(?:x)\\d+)+$")
+    }
+
+    @Test
+    fun `loop rule - what a character item matches, with flag s and with or without i`() {
+        refused("^(?:x.+)+$", "+") // . matches everything
+        refused("^(?:\\n.*)*$", "*") // . matches \n with flag s
+        refused("^(?:\\n\\s*)+$", "+") // \s matches \n
+        refused("^(?:A[a-z]+)+$", "+") // [a-z] matches A with i
+        refused("^(?:a[A-Z]+)+$", "+")
+        refused("^(?:a[^b]+)+$", "+") // [^b] matches a
+        refused("^(?:k[^K]+)+$", "+") // [^K] matches k without i
+        inside("^(?:k[^kK]+)+$")
+        refused("^(?:aA+)+$", "+") // an ASCII letter matches both its cases
+        inside("^(?:é[É]+)+$") // other letters only themselves
+        refused("^(?:5\\d+)+$", "+")
+        inside("^(?:5\\D+)+$")
+        refused("^(?:-[a-c\\-]+)+$", "+")
+        inside("^(?:-[a-c]+)+$")
+        refused("^(?:b[a-c]+)+$", "+") // an unescaped - between two characters is a range
+        // A refused escape, {..}, } or ] matches no character: only their own tokens.
+        refused("^(?:x\\w+)+$", "\\w")
+        refused("^(?:,{x}+)+$", "{x}")
+        refused("^(?:,]+)+$", "]")
+        refused("^(?:,[\\w]+)+$", "\\w")
     }
 }

@@ -16,7 +16,8 @@ import java.util.regex.PatternSyntaxException
  * other than `{1}`, `{1,1}`, `{0}` or `{0,0}` on a group that can match the empty string (T2.32,
  * which replaces T2.19's empty-iteration rule; bounds read as numbers, T2.34). A quantifier bound
  * above 1000 is refused on anything (T2.59), read without overflow, so no library's own limit is
- * reached (ICU's is 2^24).
+ * reached (ICU's is 2^24). A group that can repeat must be fixed or delimited (the loop rule,
+ * T2.60, T2.66), so no match backtracks through exponentially many splits of a text.
  *
  * Inside the dialect, the pattern is rewritten for `java.util.regex`, which on Android is ICU and
  * runs from API 24:
@@ -113,21 +114,54 @@ internal class DialectTranslator(private val src: String, private val foldAscii:
     private class Token(val at: Int, val text: String)
 
     /**
-     * An open group (T3.56, T2.23, T2.32): its own named opener, the named group openers inside it
-     * at any depth, whether it is a lookahead, and what REQ-DEV-041 needs to know whether it can
-     * match the empty string: whether it is zero-width (a lookahead or lookbehind), whether a
-     * finished alternative can, and, for each item of the current alternative, whether it can.
+     * An item for the loop rule (T2.60). A character item (a character, `.`, an escape or a class)
+     * has [matches]: whether it matches a character with flag `s`, with flag `i` or without it. A
+     * literal character also has [literal], the character it stands for. A group has neither.
+     */
+    private class LoopItem(val literal: String?, val matches: ((String) -> Boolean)?) {
+        var quantified = false
+    }
+
+    /**
+     * An open group (T3.56, T2.23, T2.32, T2.60): its own named opener, the named group openers
+     * inside it at any depth, whether it is a lookahead, and what REQ-DEV-041 needs to know whether
+     * it can match the empty string: whether it is zero-width (a lookahead or lookbehind), whether a
+     * finished alternative can, and, for each item of the current alternative, whether it can. For
+     * the loop rule, at any depth inside it: whether it holds a `|`, how many variable quantifiers
+     * and which character items; and its own items in order with whether each is quantified.
      * A lookahead also keeps where its opener starts in the rewrite ([outStart]).
      */
     private class Frame(val named: Token?, val lookahead: Boolean = false, val zeroWidth: Boolean = false, val outStart: Int = -1) {
         val inner = ArrayList<Token>()
         val items = ArrayList<Boolean>()
         var alternativeCanBeEmpty = false
+        var bar = false
+        var variables = 0
+        val chars = ArrayList<LoopItem>()
+        val sequence = ArrayList<LoopItem>()
 
         /** `|`: the current alternative is finished. */
         fun alternative() {
             if (items.all { it }) alternativeCanBeEmpty = true
             items.clear()
+            bar = true
+        }
+
+        /**
+         * The loop rule (T2.60): a group that can repeat must be fixed (no `|` and no variable
+         * quantifier inside it, at any depth) or delimited (no `|`, exactly one variable quantifier,
+         * and as its first or last item an unquantified literal character that no other character
+         * item inside the group matches). Every iteration then starts or ends at that character,
+         * which appears nowhere else in it, so a text splits into iterations one way only.
+         */
+        fun fixedOrDelimited(): Boolean = when {
+            bar -> false
+            variables == 0 -> true
+            variables > 1 -> false
+            else -> listOfNotNull(sequence.firstOrNull(), sequence.lastOrNull()).any { d ->
+                val c = d.literal
+                c != null && !d.quantified && chars.all { it === d || !it.matches!!(c) }
+            }
         }
 
         /**
@@ -156,23 +190,43 @@ internal class DialectTranslator(private val src: String, private val foldAscii:
         current().items += false
     }
 
+    /**
+     * A character item: an [item], and for the loop rule (T2.60) one of the group's own items and
+     * one of its character items. [literal] is the character a literal character stands for.
+     */
+    private fun charItem(literal: String?, matches: (String) -> Boolean) {
+        item()
+        val f = current()
+        val loop = LoopItem(literal, matches)
+        f.sequence += loop
+        f.chars += loop
+    }
+
+    /** A literal character: [c], or with flag i its other case (T2.60 reads no flags). */
+    private fun literalItem(c: String) = charItem(c) { it == c || it == otherCase(c) }
+
+    /** A character item that matches no character: a refused escape, `{…}`, `}` or `]` (T2.60). */
+    private fun nothingItem() = charItem(null) { false }
+
     fun translate(): Result {
         while (i < src.length) {
             val c = src[i]
             when (c) {
                 '\\' -> {
                     when (val e = readEscape()) {
-                        is Escape.Literal -> out.append(literalOutside(e.c))
-                        is Escape.Shorthand -> out.append(e.outside)
-                        is Escape.Refused -> Unit
+                        is Escape.Literal -> {
+                            out.append(literalOutside(e.c))
+                            literalItem(e.c.toString())
+                        }
+                        is Escape.Shorthand -> {
+                            out.append(e.outside)
+                            charItem(null) { shorthandMatches(e.letter, it) }
+                        }
+                        is Escape.Refused -> nothingItem()
                     }
-                    item()
                     quantifiable = true
                 }
-                '[' -> {
-                    charClass()
-                    item()
-                }
+                '[' -> charItem(null, charClass())
                 '(' -> group()
                 ')' -> closeGroup()
                 '|' -> {
@@ -181,7 +235,7 @@ internal class DialectTranslator(private val src: String, private val foldAscii:
                 }
                 '.' -> {
                     emit(".", quantifiable = true)
-                    item()
+                    charItem(null) { true }
                 }
                 '^', '$' -> {
                     // Only as the first and the last character; after either, nothing to repeat.
@@ -198,12 +252,12 @@ internal class DialectTranslator(private val src: String, private val foldAscii:
                         var j = i + 1
                         while (j < src.length && src[j] != '{' && src[j] != '}') j++
                         refuse(if (j < src.length && src[j] == '}') src.substring(i, j + 1) else "{")
-                        item()
+                        nothingItem()
                     }
                 }
                 '}', ']' -> {
                     refuse(c.toString())
-                    item()
+                    nothingItem()
                 }
                 else -> literal()
             }
@@ -241,13 +295,15 @@ internal class DialectTranslator(private val src: String, private val foldAscii:
     private fun literal() {
         val c = src[i]
         if (Character.isSurrogate(c)) {
-            refuse(surrogateToken(i))
+            val token = surrogateToken(i)
+            refuse(token)
+            literalItem(token)
         } else {
             out.append(literalOutside(c))
             i++
             quantifiable = true
+            literalItem(c.toString())
         }
-        item()
     }
 
     /** A character outside the BMP (a surrogate pair) or a lone surrogate at [at]: itself. */
@@ -289,6 +345,20 @@ internal class DialectTranslator(private val src: String, private val foldAscii:
             if (max.isEmpty() || max.trimStart('0') != min) return false
         }
         return min.isEmpty() || min == "1"
+    }
+
+    /**
+     * A variable quantifier (T2.60): its bounds differ. `?` `*` `+` `{n,}`, and `{n,m}` with n < m by
+     * numeric value (`{2,02}` is not one). `{n,m}` with n > m is not one either (T2.66): it doesn't
+     * compile (code `regex`), or is `dialect` by T2.59 above 1000.
+     */
+    private fun variable(q: String): Boolean {
+        if (!q.startsWith("{")) return true
+        val bounds = q.substring(1, q.length - 1).split(',')
+        if (bounds.size == 1) return false
+        if (bounds[1].isEmpty()) return true
+        val (n, m) = bounds.map { it.trimStart('0') }
+        return n.length < m.length || (n.length == m.length && n < m)
     }
 
     /** Exactly once (T2.58): `{1}` or `{1,1}`, bounds read as numbers (`{01}`, `{001,1}`, `{1,01}`). */
@@ -335,6 +405,10 @@ internal class DialectTranslator(private val src: String, private val foldAscii:
         // item can. (The group rules, T3.56 and T2.32, are checked at the group's `)`.)
         val items = current().items
         if (items.isNotEmpty()) items[items.lastIndex] = minimumZero(q) || items.last()
+        // T2.60: the item it repeats is quantified; a variable one counts in the current group (a
+        // group's own quantifier counts in the group around it).
+        current().sequence.lastOrNull()?.quantified = true
+        if (variable(q)) current().variables++
         out.append(q)
         val at = i
         i += len
@@ -449,6 +523,14 @@ internal class DialectTranslator(private val src: String, private val foldAscii:
             val after = src.getOrNull(i + q.length)
             if (after != '+') report(i, if (after == '?') "$q?" else q)
         }
+        // T2.60: a group that can repeat must be fixed or delimited, else a text that fails to match
+        // can split into iterations in exponentially many ways (all three engines backtrack). The
+        // quantifier as written, a lazy `?` included, in its own place; a possessive one is refused
+        // as possessive only. The empty-match rule may refuse the same quantifier: one token.
+        if (q != null && repeats(q) && !f.fixedOrDelimited()) {
+            val after = src.getOrNull(i + q.length)
+            if (after != '+') report(i, if (after == '?') "$q?" else q)
+        }
         // ICU refuses a quantifier on a lookahead (`(?=\d){1}`: "Syntax error in regexp pattern"),
         // which JavaScript and the JDK take, and the dialect allows {1}, {1,1}, {0} and {0,0} on one.
         // A non-capturing group around it means the same and takes the quantifier: `(?:(?=\d)){1}`.
@@ -457,6 +539,13 @@ internal class DialectTranslator(private val src: String, private val foldAscii:
             out.append(')')
         }
         current().items += canBeEmpty
+        // T2.60: what the group holds is inside the group around it; the group is one of its items.
+        current().let { parent ->
+            parent.bar = parent.bar || f.bar
+            parent.variables += f.variables
+            parent.chars += f.chars
+            parent.sequence += LoopItem(null, null)
+        }
         open.lastOrNull()?.inner?.let { parent ->
             parent += f.inner
             f.named?.let { parent += it }
@@ -483,7 +572,7 @@ internal class DialectTranslator(private val src: String, private val foldAscii:
         class Literal(val c: Char) : Escape
 
         /** `\d` `\D` `\s` `\S`: [outside] a class, or [inside] one as its content. */
-        class Shorthand(val outside: String, val inside: String) : Escape
+        class Shorthand(val outside: String, val inside: String, val letter: Char) : Escape
 
         /** Outside the dialect (recorded), or a final `\` (an error). */
         data object Refused : Escape
@@ -566,15 +655,26 @@ internal class DialectTranslator(private val src: String, private val foldAscii:
         return Item(at, src.substring(at, i), ch, set)
     }
 
-    private fun charClass() {
-        if (src.startsWith("[]", i)) return refuse("[]")
-        if (src.startsWith("[^]", i)) return refuse("[^]")
+    /**
+     * A class at [i], written for `java.util.regex`; returns what it matches for the loop rule
+     * (T2.60): a character, with flag `s`, with flag `i` or without it.
+     */
+    private fun charClass(): (String) -> Boolean {
+        if (src.startsWith("[]", i)) {
+            refuse("[]")
+            return { false }
+        }
+        if (src.startsWith("[^]", i)) {
+            refuse("[^]")
+            return { true }
+        }
         i++
         val negated = i < src.length && src[i] == '^'
         if (negated) i++
         val body = StringBuilder()
         // Flag i: the other case of each ASCII letter the class holds (T2.18).
         val other = StringBuilder()
+        val parts = ArrayList<ClassPart>()
         var closed = false
         while (i < src.length) {
             if (src[i] == ']') {
@@ -583,6 +683,7 @@ internal class DialectTranslator(private val src: String, private val foldAscii:
                 break
             }
             val lo = classItem()
+            parts.addPartsOf(lo)
             // A range: an unescaped `-` between two items, not before the closing `]`.
             if (!(i + 1 < src.length && src[i] == '-' && src[i + 1] != ']')) {
                 if (lo.c != null) {
@@ -594,7 +695,9 @@ internal class DialectTranslator(private val src: String, private val foldAscii:
                 continue
             }
             i++
+            parts += ClassPart("-", null, escaped = false)
             val hi = classItem()
+            parts.addPartsOf(hi)
             when {
                 // `[\d-z]`, `[a-\d]`: JavaScript reads the `-` as a literal, the JDK refuses it.
                 lo.set != null || hi.set != null -> report(lo.at, lo.text + "-" + hi.text)
@@ -609,6 +712,50 @@ internal class DialectTranslator(private val src: String, private val foldAscii:
         if (!closed) fail("unterminated character class")
         out.append(if (negated) "[^" else "[").append(body).append(other).append(']')
         quantifiable = true
+        return classMatcher(parts, negated)
+    }
+
+    /**
+     * A class's content as the loop rule reads it (T2.60): a [literal] character, escaped or not, or
+     * a shorthand's letter ([shorthand], `\d` `\D` `\s` `\S`); neither for a refused escape, which
+     * matches no character. A raw character the dialect refuses in a class (`[`, `&&`, a surrogate)
+     * is read as JavaScript reads it, unit by unit.
+     */
+    private class ClassPart(val literal: String?, val shorthand: Char?, val escaped: Boolean)
+
+    private fun MutableList<ClassPart>.addPartsOf(item: Item) {
+        when {
+            item.c != null -> add(ClassPart(item.c.toString(), null, escaped = item.text.startsWith("\\")))
+            item.set != null -> add(ClassPart(null, item.text[1], escaped = true))
+            item.text.startsWith("\\") -> add(ClassPart(null, null, escaped = true))
+            else -> item.text.forEach { add(ClassPart(it.toString(), null, escaped = false)) }
+        }
+    }
+
+    /**
+     * What a class matches for the loop rule (T2.60), with flag `i` or without it: a range is two
+     * literals around an unescaped `-` (an escaped `\-` is a literal `-`, T2.66); a negated class
+     * matches c when c is outside it without `i`, which `[^k]` does for `K` but never for `k`.
+     */
+    private fun classMatcher(parts: List<ClassPart>, negated: Boolean): (String) -> Boolean {
+        val singles = ArrayList<String>()
+        val ranges = ArrayList<Pair<String, String>>()
+        val shorthands = ArrayList<Char>()
+        var k = 0
+        while (k < parts.size) {
+            val a = parts[k]
+            val dash = parts.getOrNull(k + 1)
+            val b = parts.getOrNull(k + 2)
+            if (a.literal != null && dash != null && dash.literal == "-" && !dash.escaped && b?.literal != null) {
+                ranges += a.literal to b.literal
+                k += 3
+                continue
+            }
+            if (a.shorthand != null) shorthands += a.shorthand else if (a.literal != null) singles += a.literal
+            k++
+        }
+        fun has(x: String) = x in singles || ranges.any { (lo, hi) -> x >= lo && x <= hi } || shorthands.any { shorthandMatches(it, x) }
+        return if (negated) { x -> !has(x) } else { x -> has(x) || has(otherCase(x)) }
     }
 
     private companion object {
@@ -621,10 +768,24 @@ internal class DialectTranslator(private val src: String, private val foldAscii:
         /** The dialect's `\s`: space, `\t`, `\n`, U+000B, `\f`, `\r`, as class content. */
         const val ASCII_SPACE = "\\u0020\\u0009\\u000a\\u000b\\u000c\\u000d"
 
-        val DIGIT = Escape.Shorthand("[0-9]", "0-9")
-        val NOT_DIGIT = Escape.Shorthand("[^0-9]", "\\u0000-\\u002f\\u003a-\\x{10FFFF}")
-        val SPACE = Escape.Shorthand("[$ASCII_SPACE]", ASCII_SPACE)
-        val NOT_SPACE = Escape.Shorthand("[^$ASCII_SPACE]", "\\u0000-\\u0008\\u000e-\\u001f\\u0021-\\x{10FFFF}")
+        val DIGIT = Escape.Shorthand("[0-9]", "0-9", 'd')
+        val NOT_DIGIT = Escape.Shorthand("[^0-9]", "\\u0000-\\u002f\\u003a-\\x{10FFFF}", 'D')
+        val SPACE = Escape.Shorthand("[$ASCII_SPACE]", ASCII_SPACE, 's')
+        val NOT_SPACE = Escape.Shorthand("[^$ASCII_SPACE]", "\\u0000-\\u0008\\u000e-\\u001f\\u0021-\\x{10FFFF}", 'S')
+
+        /** The dialect's `\s`: ASCII whitespace. */
+        const val ASCII_SPACE_CHARS = " \t\n\u000B\u000C\r"
+
+        /** What `\d` `\D` `\s` `\S` match ([letter]), for the loop rule (T2.60): a single character. */
+        fun shorthandMatches(letter: Char, x: String): Boolean = when (letter) {
+            'd' -> x.length == 1 && x[0] in '0'..'9'
+            'D' -> !shorthandMatches('d', x)
+            's' -> x.length == 1 && x[0] in ASCII_SPACE_CHARS
+            else -> !shorthandMatches('s', x)
+        }
+
+        /** The other case of a one-character ASCII letter, else [s] itself (T2.60). */
+        fun otherCase(s: String): String = if (s.length == 1) otherCase(s[0])?.toString() ?: s else s
 
         fun Char.isAsciiLetter(): Boolean = this in 'a'..'z' || this in 'A'..'Z'
 

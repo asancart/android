@@ -73,7 +73,7 @@ class TemplateSchemaTest {
 
     @Test
     fun `every pattern construct of the dialect validates`() {
-        val p = "^(?![\\s\\S]*\\+\\d)\\u062D\\x41[^\\d\\n]{1,3}?(?:a|b)*(?<account>\\d+)\\.\\/\\-(?=\\S)(?<kind>\\D+?)(?<amount>[\\d,]+)\\t?.$"
+        val p = "^(?![\\s\\S]*\\+\\d)\\u062D\\x41[^\\d\\n]{1,3}?(?:a|b)(?:,\\d+)*(?<account>\\d+)\\.\\/\\-(?=\\S)(?<kind>\\D+?)(?<amount>[\\d,]+)\\t?.$"
         assertEquals(emptyList(), codes(with("pattern" to JsonPrimitive(p), "flags" to JsonPrimitive("is"))))
     }
 
